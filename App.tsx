@@ -4,7 +4,14 @@ import { Planner } from './components/Planner';
 import { ConsistencyTracker } from './components/ConsistencyTracker';
 import { Layout, LayoutGrid, CheckSquare, BarChart3 } from 'lucide-react';
 import { VisionItem, Task, Activity } from './types';
-import { onAuthStateChanged, signInAnonymously } from 'firebase/auth';
+import {
+  GoogleAuthProvider,
+  onAuthStateChanged,
+  signInWithPopup,
+  signInWithRedirect,
+  signOut,
+  getRedirectResult,
+} from 'firebase/auth';
 import { auth } from './src/firebase';
 import { getUserStreak, recordActivityForUser, StreakDoc } from './src/streak';
 
@@ -13,6 +20,7 @@ const App: React.FC = () => {
 
   const [uid, setUid] = useState<string | null>(null);
   const [streak, setStreak] = useState<StreakDoc | null>(null);
+  const [authError, setAuthError] = useState<string | null>(null);
   
   // Persistence logic
   const [visionItems, setVisionItems] = useState<VisionItem[]>(() => {
@@ -42,19 +50,48 @@ const App: React.FC = () => {
     localStorage.setItem('activity_history', JSON.stringify(activities));
   }, [activities]);
 
-  // Auth bootstrap (Anonymous)
+  // Auth bootstrap (Google)
   useEffect(() => {
     const unsub = onAuthStateChanged(auth, (user) => {
       setUid(user?.uid ?? null);
     });
 
-    // Ensure we have a user
-    signInAnonymously(auth).catch((err) => {
-      console.error('Anonymous sign-in failed', err);
+    // Handle redirect flow result if popup is blocked
+    getRedirectResult(auth).catch((err) => {
+      console.error('Redirect sign-in failed', err);
+      setAuthError(err?.message ?? 'Sign-in failed');
     });
 
     return () => unsub();
   }, []);
+
+  const handleGoogleSignIn = async () => {
+    setAuthError(null);
+    const provider = new GoogleAuthProvider();
+    try {
+      await signInWithPopup(auth, provider);
+    } catch (err: any) {
+      // Common case: popup blocked => use redirect
+      const code = err?.code as string | undefined;
+      if (code === 'auth/popup-blocked' || code === 'auth/cancelled-popup-request') {
+        await signInWithRedirect(auth, provider);
+        return;
+      }
+      console.error('Google sign-in failed', err);
+      setAuthError(err?.message ?? 'Google sign-in failed');
+    }
+  };
+
+  const handleSignOut = async () => {
+    setAuthError(null);
+    try {
+      await signOut(auth);
+      setStreak(null);
+    } catch (err: any) {
+      console.error('Sign out failed', err);
+      setAuthError(err?.message ?? 'Sign out failed');
+    }
+  };
 
   // Load streak from Firestore once we have a uid
   useEffect(() => {
@@ -105,6 +142,42 @@ const App: React.FC = () => {
 
       {/* Main Content */}
       <main className="max-w-6xl mx-auto px-4 py-8">
+        {/* Auth banner */}
+        <div className="mb-6">
+          {!uid ? (
+            <div className="bg-white border border-slate-200 rounded-2xl p-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+              <div>
+                <p className="font-semibold text-slate-900">Sign in to sync your streak</p>
+                <p className="text-sm text-slate-500">
+                  Use Google Sign-In to save your streak in Firestore.
+                </p>
+                {authError && (
+                  <p className="text-sm text-red-600 mt-2">{authError}</p>
+                )}
+              </div>
+              <button
+                onClick={handleGoogleSignIn}
+                className="px-4 py-2 rounded-xl bg-indigo-600 text-white font-semibold hover:bg-indigo-700 transition"
+              >
+                Sign in with Google
+              </button>
+            </div>
+          ) : (
+            <div className="bg-white border border-slate-200 rounded-2xl p-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+              <div>
+                <p className="font-semibold text-slate-900">Signed in</p>
+                <p className="text-sm text-slate-500">Your streak will sync to Firestore.</p>
+              </div>
+              <button
+                onClick={handleSignOut}
+                className="px-4 py-2 rounded-xl bg-slate-100 text-slate-800 font-semibold hover:bg-slate-200 transition"
+              >
+                Sign out
+              </button>
+            </div>
+          )}
+        </div>
+
         {activeTab === 'vision' && (
           <VisionBoard 
             items={visionItems} 
