@@ -36,6 +36,8 @@
           const stored = localStorage.getItem('theme');
           // Default to LIGHT unless the user explicitly set a theme.
           const theme = stored || 'light';
+          // Always reset first (prevents getting stuck in dark if something cached/old set it)
+          document.documentElement.classList.remove('dark');
           if (theme === 'dark') document.documentElement.classList.add('dark');
         } catch (_) {
           // ignore
@@ -54,7 +56,7 @@
 }
 </script>
 </head>
-<body class="bg-slate-50 text-slate-900 dark:bg-slate-950 dark:text-slate-100 selection:bg-indigo-100 selection:text-indigo-900 dark:selection:bg-indigo-900/40 dark:selection:text-indigo-100">
+<body class="bg-white text-slate-900 dark:bg-slate-950 dark:text-slate-100 selection:bg-indigo-100 selection:text-indigo-900 dark:selection:bg-indigo-900/40 dark:selection:text-indigo-100">
     <div id="root"></div>
     <script type="module" src="/index.tsx"></script>
 </body>
