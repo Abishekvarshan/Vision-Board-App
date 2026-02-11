@@ -13,21 +13,53 @@ export const ConsistencyTracker: React.FC<Props> = ({
   currentStreak,
   longestStreak,
 }) => {
-  const heatmapData = useMemo(() => {
-    const data = [];
+  const { weeks, monthLabels, dayLabels } = useMemo(() => {
     const today = new Date();
-    // 53 weeks * 7 days
-    for (let i = 370; i >= 0; i--) {
-      const d = new Date();
-      d.setDate(today.getDate() - i);
-      const dateStr = d.toISOString().split('T')[0];
+    const end = new Date(today);
+    end.setHours(0, 0, 0, 0);
+
+    // Start date: go back ~52 weeks and align to Sunday (GitHub-like)
+    const start = new Date(end);
+    start.setDate(start.getDate() - 364);
+    start.setHours(0, 0, 0, 0);
+    const day = start.getDay(); // 0=Sun
+    start.setDate(start.getDate() - day);
+
+    const formatDate = (d: Date) => d.toISOString().split('T')[0];
+
+    const days: { date: string; count: number; jsDate: Date }[] = [];
+    const cursor = new Date(start);
+    while (cursor <= end) {
+      const dateStr = formatDate(cursor);
       const activity = activities.find(a => a.date === dateStr);
-      data.push({
-        date: dateStr,
-        count: activity ? activity.count : 0
-      });
+      days.push({ date: dateStr, count: activity ? activity.count : 0, jsDate: new Date(cursor) });
+      cursor.setDate(cursor.getDate() + 1);
     }
-    return data;
+
+    // Group into weeks (columns). Each week has 7 days (rows).
+    const weeks: { date: string; count: number; jsDate: Date }[][] = [];
+    for (let i = 0; i < days.length; i += 7) {
+      const week = days.slice(i, i + 7);
+      if (week.length === 7) weeks.push(week);
+    }
+
+    // Month labels: show label when month changes at the start of a week
+    const monthFmt = new Intl.DateTimeFormat(undefined, { month: 'short' });
+    const monthLabels = weeks.map((week, idx) => {
+      const firstDay = week[0].jsDate;
+      const prevFirst = idx > 0 ? weeks[idx - 1][0].jsDate : null;
+      const changed = !prevFirst || prevFirst.getMonth() !== firstDay.getMonth() || prevFirst.getFullYear() !== firstDay.getFullYear();
+      return changed ? monthFmt.format(firstDay) : '';
+    });
+
+    // Day labels on the left (GitHub shows Mon/Wed/Fri typically)
+    const dayLabels = [
+      { row: 1, label: 'Mon' },
+      { row: 3, label: 'Wed' },
+      { row: 5, label: 'Fri' },
+    ];
+
+    return { weeks, monthLabels, dayLabels };
   }, [activities]);
 
   const getColor = (count: number) => {
@@ -38,12 +70,6 @@ export const ConsistencyTracker: React.FC<Props> = ({
     return 'bg-indigo-900';
   };
 
-  // Group by weeks for the grid
-  const weeks = [];
-  for (let i = 0; i < heatmapData.length; i += 7) {
-    weeks.push(heatmapData.slice(i, i + 7));
-  }
-
   return (
     <div className="space-y-8 animate-in fade-in duration-500">
       <div className="mb-12">
@@ -52,18 +78,41 @@ export const ConsistencyTracker: React.FC<Props> = ({
       </div>
 
       <div className="bg-white dark:bg-slate-900 p-8 rounded-3xl shadow-sm border border-slate-100 dark:border-slate-800 overflow-x-auto">
-        <div className="flex gap-[3px] min-w-max">
-          {weeks.map((week, wIdx) => (
-            <div key={wIdx} className="flex flex-col gap-[3px]">
-              {week.map((day, dIdx) => (
-                <div 
-                  key={dIdx} 
-                  title={`${day.date}: ${day.count} activities`}
-                  className={`w-[14px] h-[14px] rounded-[2px] cursor-help transition-all hover:ring-2 hover:ring-indigo-300 ${getColor(day.count)}`} 
-                />
-              ))}
+        {/* Month labels */}
+        <div className="flex gap-[3px] min-w-max pl-10 mb-2">
+          {monthLabels.map((label, idx) => (
+            <div key={idx} className="w-[14px] text-[10px] font-semibold text-slate-400">
+              {label}
             </div>
           ))}
+        </div>
+
+        {/* Grid with day labels */}
+        <div className="flex gap-2 min-w-max">
+          <div className="w-8 flex flex-col gap-[3px]">
+            {Array.from({ length: 7 }).map((_, row) => {
+              const dl = dayLabels.find(d => d.row === row);
+              return (
+                <div key={row} className="h-[14px] text-[10px] text-slate-400 leading-[14px]">
+                  {dl ? dl.label : ''}
+                </div>
+              );
+            })}
+          </div>
+
+          <div className="flex gap-[3px]">
+            {weeks.map((week, wIdx) => (
+              <div key={wIdx} className="flex flex-col gap-[3px]">
+                {week.map((day, dIdx) => (
+                  <div
+                    key={dIdx}
+                    title={`${day.date}: ${day.count} activities`}
+                    className={`w-[14px] h-[14px] rounded-[2px] cursor-help transition-all hover:ring-2 hover:ring-indigo-300 ${getColor(day.count)}`}
+                  />
+                ))}
+              </div>
+            ))}
+          </div>
         </div>
         <div className="mt-6 flex items-center justify-end gap-2 text-xs text-slate-400 font-medium">
           <span>Less</span>
