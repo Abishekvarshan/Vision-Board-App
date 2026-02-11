@@ -31,8 +31,8 @@
       (function () {
         try {
           const stored = localStorage.getItem('theme');
-          const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
-          const theme = stored || (prefersDark ? 'dark' : 'light');
+          // Default to LIGHT unless the user explicitly set a theme.
+          const theme = stored || 'light';
           if (theme === 'dark') document.documentElement.classList.add('dark');
         } catch (_) {
           // ignore
