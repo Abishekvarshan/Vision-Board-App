@@ -8,12 +8,10 @@ interface Props {
   onDeleteItem: (id: string) => void;
 }
 
-// Configuration for Cloudinary
-const CLOUDINARY_API_KEY = "721966247349349";
-// Cloud name is required for Cloudinary uploads. 
-// Note: In a production app, you should use an Unsigned Upload Preset for security on the frontend.
-const CLOUD_NAME = "demo"; // Replace with your actual Cloudinary Cloud Name
-const UPLOAD_PRESET = "ml_default"; // Replace with your actual Unsigned Upload Preset name
+// Configuration for Cloudinary (UNSIGNED upload)
+// IMPORTANT: Do not use Cloudinary API secret in frontend.
+const CLOUD_NAME = import.meta.env.VITE_CLOUDINARY_CLOUD_NAME;
+const UPLOAD_PRESET = import.meta.env.VITE_CLOUDINARY_UPLOAD_PRESET;
 
 export const VisionBoard: React.FC<Props> = ({ items, onAddItem, onDeleteItem }) => {
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -37,7 +35,6 @@ export const VisionBoard: React.FC<Props> = ({ items, onAddItem, onDeleteItem })
     const formData = new FormData();
     formData.append('file', file);
     formData.append('upload_preset', UPLOAD_PRESET);
-    formData.append('api_key', CLOUDINARY_API_KEY);
 
     try {
       const response = await fetch(`https://api.cloudinary.com/v1_1/${CLOUD_NAME}/image/upload`, {
