@@ -47,8 +47,8 @@ export const ConsistencyTracker: React.FC<Props> = ({
   return (
     <div className="space-y-8 animate-in fade-in duration-500">
       <div className="mb-12">
-        <h2 className="text-3xl font-bold text-slate-900">Consistency Tracker</h2>
-        <p className="text-slate-500">Visualization of your discipline and progress over the past year.</p>
+        <h2 className="text-3xl font-bold text-slate-900 dark:text-slate-100">Consistency Tracker</h2>
+        <p className="text-slate-500 dark:text-slate-400">Visualization of your discipline and progress over the past year.</p>
       </div>
 
       <div className="bg-white dark:bg-slate-900 p-8 rounded-3xl shadow-sm border border-slate-100 dark:border-slate-800 overflow-x-auto">
@@ -79,7 +79,7 @@ export const ConsistencyTracker: React.FC<Props> = ({
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <div className="bg-white dark:bg-slate-900 p-6 rounded-3xl shadow-sm border border-slate-100 dark:border-slate-800">
           <p className="text-sm font-bold text-slate-400 uppercase mb-1">Total Activities</p>
-          <p className="text-4xl font-black text-slate-900">{activities.reduce((acc, curr) => acc + curr.count, 0)}</p>
+          <p className="text-4xl font-black text-slate-900 dark:text-slate-100">{activities.reduce((acc, curr) => acc + curr.count, 0)}</p>
         </div>
         <div className="bg-white dark:bg-slate-900 p-6 rounded-3xl shadow-sm border border-slate-100 dark:border-slate-800">
           <p className="text-sm font-bold text-slate-400 uppercase mb-1">Active Days</p>
@@ -87,7 +87,7 @@ export const ConsistencyTracker: React.FC<Props> = ({
         </div>
         <div className="bg-white dark:bg-slate-900 p-6 rounded-3xl shadow-sm border border-slate-100 dark:border-slate-800">
           <p className="text-sm font-bold text-slate-400 uppercase mb-1">Current Streak</p>
-          <p className="text-4xl font-black text-slate-900">
+          <p className="text-4xl font-black text-slate-900 dark:text-slate-100">
             {typeof currentStreak === 'number' ? `${currentStreak} Days` : '—'}
           </p>
         </div>

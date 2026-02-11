@@ -52,10 +52,10 @@ export const AIAssistant: React.FC<Props> = ({ visionItems, tasks }) => {
   return (
     <div className="max-w-2xl mx-auto flex flex-col h-[calc(100vh-200px)] animate-in fade-in slide-in-from-bottom-4 duration-500">
       <div className="mb-6">
-        <h2 className="text-3xl font-bold text-slate-900 flex items-center gap-2">
+        <h2 className="text-3xl font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
           Vision Coach <Sparkles className="w-6 h-6 text-indigo-500" />
         </h2>
-        <p className="text-slate-500">Personalized guidance based on your vision board and daily focus.</p>
+        <p className="text-slate-500 dark:text-slate-400">Personalized guidance based on your vision board and daily focus.</p>
       </div>
 
       <div className="flex-1 overflow-y-auto space-y-4 mb-6 pr-2 scrollbar-thin scrollbar-thumb-slate-200">
@@ -88,14 +88,14 @@ export const AIAssistant: React.FC<Props> = ({ visionItems, tasks }) => {
         )}
       </div>
 
-      <div className="glass border border-slate-200 p-2 rounded-3xl shadow-lg flex gap-2">
+      <div className="glass border border-slate-200 dark:border-slate-800 p-2 rounded-3xl shadow-lg flex gap-2">
         <input 
           type="text" 
           value={input}
           onChange={(e) => setInput(e.target.value)}
           onKeyDown={(e) => e.key === 'Enter' && handleSend()}
           placeholder="Ask your coach..."
-          className="flex-1 px-4 py-2 bg-transparent focus:outline-none text-slate-800"
+          className="flex-1 px-4 py-2 bg-transparent focus:outline-none text-slate-800 dark:text-slate-100 placeholder:text-slate-400 dark:placeholder:text-slate-500"
         />
         <button 
           onClick={handleSend}

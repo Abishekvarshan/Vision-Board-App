@@ -94,8 +94,8 @@ export const VisionBoard: React.FC<Props> = ({ items, onAddItem, onDeleteItem })
     <div className="space-y-8 animate-in fade-in duration-500">
       <div className="flex flex-col sm:flex-row sm:justify-between sm:items-end gap-4">
         <div>
-          <h2 className="text-3xl font-bold text-slate-900 tracking-tight">Vision Board</h2>
-          <p className="text-slate-500">Visualize your journey to the person you want to become.</p>
+          <h2 className="text-3xl font-bold text-slate-900 dark:text-slate-100 tracking-tight">Vision Board</h2>
+          <p className="text-slate-500 dark:text-slate-400">Visualize your journey to the person you want to become.</p>
         </div>
         <button 
           onClick={() => setIsModalOpen(true)}
@@ -107,12 +107,12 @@ export const VisionBoard: React.FC<Props> = ({ items, onAddItem, onDeleteItem })
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
         {items.length === 0 ? (
-          <div className="col-span-full py-32 border-2 border-dashed border-slate-200 rounded-[2.5rem] flex flex-col items-center justify-center text-slate-400 bg-white/50">
-            <div className="p-5 bg-slate-100 rounded-full mb-4">
+          <div className="col-span-full py-32 border-2 border-dashed border-slate-200 dark:border-slate-800 rounded-[2.5rem] flex flex-col items-center justify-center text-slate-400 bg-white/50 dark:bg-slate-900/30">
+            <div className="p-5 bg-slate-100 dark:bg-slate-800 rounded-full mb-4">
               <ImageIcon className="w-12 h-12 opacity-30" />
             </div>
-            <p className="text-lg font-medium text-slate-600">Your future starts here.</p>
-            <p className="text-sm">Click the button to add your first goal.</p>
+            <p className="text-lg font-medium text-slate-600 dark:text-slate-200">Your future starts here.</p>
+            <p className="text-sm text-slate-500 dark:text-slate-400">Click the button to add your first goal.</p>
           </div>
         ) : (
           items.map(item => (
@@ -132,7 +132,7 @@ export const VisionBoard: React.FC<Props> = ({ items, onAddItem, onDeleteItem })
                 <Trash2 className="w-4 h-4" />
               </button>
               <div className="p-5">
-                <p className="font-semibold text-slate-800 line-clamp-2 leading-snug">{item.caption || 'Future Goal'}</p>
+                <p className="font-semibold text-slate-800 dark:text-slate-100 line-clamp-2 leading-snug">{item.caption || 'Future Goal'}</p>
                 <p className="text-[10px] text-slate-400 mt-2 uppercase font-bold tracking-widest">
                   {new Date(item.createdAt).toLocaleDateString()}
                 </p>
@@ -147,10 +147,10 @@ export const VisionBoard: React.FC<Props> = ({ items, onAddItem, onDeleteItem })
         <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-300">
           <div className="bg-white dark:bg-slate-900 w-full max-w-md rounded-[2.5rem] shadow-2xl p-8 animate-in zoom-in duration-300">
             <div className="flex justify-between items-center mb-8">
-              <h3 className="text-2xl font-bold text-slate-900">Add to Board</h3>
+              <h3 className="text-2xl font-bold text-slate-900 dark:text-slate-100">Add to Board</h3>
               <button 
                 onClick={resetForm} 
-                className="p-2 hover:bg-slate-100 rounded-full transition-colors"
+                className="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full transition-colors"
                 disabled={isUploading}
               >
                 <X className="w-6 h-6 text-slate-400" />
@@ -158,7 +158,7 @@ export const VisionBoard: React.FC<Props> = ({ items, onAddItem, onDeleteItem })
             </div>
             
             <form onSubmit={handleSubmit} className="space-y-6">
-              <div className="relative aspect-video bg-slate-50 rounded-3xl flex items-center justify-center overflow-hidden border-2 border-dashed border-slate-200 transition-all hover:border-indigo-300">
+              <div className="relative aspect-video bg-slate-50 dark:bg-slate-950 rounded-3xl flex items-center justify-center overflow-hidden border-2 border-dashed border-slate-200 dark:border-slate-800 transition-all hover:border-indigo-300">
                 {previewUrl ? (
                   <div className="relative w-full h-full">
                     <img src={previewUrl} className="w-full h-full object-cover" />
@@ -172,10 +172,10 @@ export const VisionBoard: React.FC<Props> = ({ items, onAddItem, onDeleteItem })
                   </div>
                 ) : (
                   <label className="cursor-pointer flex flex-col items-center p-6 text-center group">
-                    <div className="p-4 bg-indigo-50 rounded-2xl mb-3 group-hover:bg-indigo-100 transition-colors">
+                    <div className="p-4 bg-indigo-50 dark:bg-indigo-900/30 rounded-2xl mb-3 group-hover:bg-indigo-100 dark:group-hover:bg-indigo-900/40 transition-colors">
                       <UploadCloud className="w-10 h-10 text-indigo-500" />
                     </div>
-                    <span className="text-sm font-bold text-slate-700">Choose an image</span>
+                    <span className="text-sm font-bold text-slate-700 dark:text-slate-200">Choose an image</span>
                     <span className="text-xs text-slate-400 mt-1">PNG, JPG or WebP</span>
                     <input type="file" accept="image/*" className="hidden" onChange={handleFileChange} />
                   </label>
@@ -189,7 +189,7 @@ export const VisionBoard: React.FC<Props> = ({ items, onAddItem, onDeleteItem })
                   value={caption}
                   onChange={(e) => setCaption(e.target.value)}
                   placeholder="What does this represent?"
-                  className="w-full px-5 py-3 bg-slate-50 border border-slate-100 rounded-2xl focus:outline-none focus:ring-4 focus:ring-indigo-500/10 focus:bg-white transition-all text-slate-800"
+                  className="w-full px-5 py-3 bg-slate-50 dark:bg-slate-950 border border-slate-100 dark:border-slate-800 rounded-2xl focus:outline-none focus:ring-4 focus:ring-indigo-500/10 focus:bg-white dark:focus:bg-slate-950 transition-all text-slate-800 dark:text-slate-100 placeholder:text-slate-400 dark:placeholder:text-slate-500"
                 />
               </div>
 
@@ -204,7 +204,7 @@ export const VisionBoard: React.FC<Props> = ({ items, onAddItem, onDeleteItem })
                       className={`px-4 py-1.5 rounded-full text-xs font-bold transition-all border ${
                         category === cat 
                           ? 'bg-indigo-600 border-indigo-600 text-white shadow-md' 
-                          : 'bg-white border-slate-200 text-slate-500 hover:border-indigo-200'
+                          : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700 text-slate-500 dark:text-slate-300 hover:border-indigo-200'
                       }`}
                     >
                       {cat}
