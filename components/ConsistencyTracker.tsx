@@ -13,7 +13,7 @@ export const ConsistencyTracker: React.FC<Props> = ({
   currentStreak,
   longestStreak,
 }) => {
-  const { weeks, monthLabels, dayLabels } = useMemo(() => {
+  const { weeks, monthLabels, monthStarts, dayLabels } = useMemo(() => {
     const today = new Date();
     const end = new Date(today);
     end.setHours(0, 0, 0, 0);
@@ -45,11 +45,15 @@ export const ConsistencyTracker: React.FC<Props> = ({
 
     // Month labels: show label when month changes at the start of a week
     const monthFmt = new Intl.DateTimeFormat(undefined, { month: 'short' });
-    const monthLabels = weeks.map((week, idx) => {
+    const monthStarts = weeks.map((week, idx) => {
       const firstDay = week[0].jsDate;
       const prevFirst = idx > 0 ? weeks[idx - 1][0].jsDate : null;
-      const changed = !prevFirst || prevFirst.getMonth() !== firstDay.getMonth() || prevFirst.getFullYear() !== firstDay.getFullYear();
-      return changed ? monthFmt.format(firstDay) : '';
+      return !prevFirst || prevFirst.getMonth() !== firstDay.getMonth() || prevFirst.getFullYear() !== firstDay.getFullYear();
+    });
+
+    const monthLabels = weeks.map((week, idx) => {
+      if (!monthStarts[idx]) return '';
+      return monthFmt.format(week[0].jsDate);
     });
 
     // Day labels on the left (GitHub shows Mon/Wed/Fri typically)
@@ -59,8 +63,12 @@ export const ConsistencyTracker: React.FC<Props> = ({
       { row: 5, label: 'Fri' },
     ];
 
-    return { weeks, monthLabels, dayLabels };
+    return { weeks, monthLabels, monthStarts, dayLabels };
   }, [activities]);
+
+  const CELL = 12;
+  const GAP = 3;
+  const MONTH_GAP = 8;
 
   const getColor = (count: number) => {
     if (count === 0) return 'bg-slate-100';
@@ -79,9 +87,17 @@ export const ConsistencyTracker: React.FC<Props> = ({
 
       <div className="bg-white dark:bg-slate-900 p-8 rounded-3xl shadow-sm border border-slate-100 dark:border-slate-800 overflow-x-auto">
         {/* Month labels */}
-        <div className="flex gap-[3px] min-w-max pl-10 mb-2">
+        <div className="flex min-w-max pl-10 mb-2">
           {monthLabels.map((label, idx) => (
-            <div key={idx} className="w-[14px] text-[10px] font-semibold text-slate-400">
+            <div
+              key={idx}
+              style={{
+                width: CELL,
+                marginRight: idx === monthLabels.length - 1 ? 0 : GAP,
+                marginLeft: monthStarts[idx] && idx !== 0 ? MONTH_GAP : 0,
+              }}
+              className="text-[10px] font-semibold text-slate-400"
+            >
               {label}
             </div>
           ))}
@@ -89,25 +105,33 @@ export const ConsistencyTracker: React.FC<Props> = ({
 
         {/* Grid with day labels */}
         <div className="flex gap-2 min-w-max">
-          <div className="w-8 flex flex-col gap-[3px]">
+          <div className="w-8 flex flex-col" style={{ gap: GAP }}>
             {Array.from({ length: 7 }).map((_, row) => {
               const dl = dayLabels.find(d => d.row === row);
               return (
-                <div key={row} className="h-[14px] text-[10px] text-slate-400 leading-[14px]">
+                <div key={row} className="text-[10px] text-slate-400" style={{ height: CELL, lineHeight: `${CELL}px` }}>
                   {dl ? dl.label : ''}
                 </div>
               );
             })}
           </div>
 
-          <div className="flex gap-[3px]">
+          <div className="flex" style={{ gap: GAP }}>
             {weeks.map((week, wIdx) => (
-              <div key={wIdx} className="flex flex-col gap-[3px]">
+              <div
+                key={wIdx}
+                className="flex flex-col"
+                style={{
+                  gap: GAP,
+                  marginLeft: monthStarts[wIdx] && wIdx !== 0 ? MONTH_GAP : 0,
+                }}
+              >
                 {week.map((day, dIdx) => (
                   <div
                     key={dIdx}
                     title={`${day.date}: ${day.count} activities`}
-                    className={`w-[14px] h-[14px] rounded-[2px] cursor-help transition-all hover:ring-2 hover:ring-indigo-300 ${getColor(day.count)}`}
+                    className={`rounded-[2px] cursor-help transition-all hover:ring-2 hover:ring-indigo-300 ${getColor(day.count)}`}
+                    style={{ width: CELL, height: CELL }}
                   />
                 ))}
               </div>
