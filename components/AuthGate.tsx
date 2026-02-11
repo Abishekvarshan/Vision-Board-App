@@ -104,7 +104,7 @@ export const AuthGate: React.FC<Props> = ({ children }) => {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-slate-50 dark:bg-slate-950 flex items-center justify-center">
+      <div className="min-h-screen bg-white dark:bg-slate-950 flex items-center justify-center">
         <div className="text-slate-500 dark:text-slate-400 font-medium">Loading…</div>
       </div>
     );
@@ -112,7 +112,7 @@ export const AuthGate: React.FC<Props> = ({ children }) => {
 
   if (!user) {
     return (
-      <div className="min-h-screen bg-slate-50 dark:bg-slate-950 flex items-center justify-center px-4">
+      <div className="min-h-screen bg-white dark:bg-slate-950 flex items-center justify-center px-4">
         <div className="w-full max-w-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl shadow-sm p-8">
           <h1 className="text-2xl font-bold text-indigo-600 flex items-center gap-2">
             <Layout className="w-6 h-6" /> VisionFlow
