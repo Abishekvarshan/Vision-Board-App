@@ -155,8 +155,8 @@ export const AuthGate: React.FC<Props> = ({ children }) => {
     <>
       <div className="bg-white dark:bg-slate-950 border-b border-slate-200 dark:border-slate-800">
         <div className="max-w-6xl mx-auto px-4 py-3 flex items-center justify-between">
-          <div className="text-sm text-slate-600 dark:text-slate-300">
-            Signed in as <span className="font-semibold text-slate-900 dark:text-slate-100">{user.email ?? user.uid}</span>
+          <div className="text-sm font-bold text-indigo-600 flex items-center gap-2">
+            <Layout className="w-5 h-5" /> VisionFlow
           </div>
 
           <div className="relative" ref={menuRef}>

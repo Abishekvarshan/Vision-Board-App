@@ -116,7 +116,7 @@ export const VisionBoard: React.FC<Props> = ({ items, onAddItem, onDeleteItem })
           </div>
         ) : (
           items.map(item => (
-            <div key={item.id} className="group relative bg-white rounded-[2rem] overflow-hidden shadow-sm hover:shadow-2xl hover:-translate-y-1 transition-all duration-500 border border-slate-100">
+            <div key={item.id} className="group relative bg-white dark:bg-slate-900 rounded-[2rem] overflow-hidden shadow-sm hover:shadow-2xl hover:-translate-y-1 transition-all duration-500 border border-slate-100 dark:border-slate-800">
               <div className="aspect-[4/3] overflow-hidden bg-slate-100">
                 <img src={item.url} alt={item.caption} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" />
               </div>
@@ -145,7 +145,7 @@ export const VisionBoard: React.FC<Props> = ({ items, onAddItem, onDeleteItem })
       {/* Upload Modal */}
       {isModalOpen && (
         <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-300">
-          <div className="bg-white w-full max-w-md rounded-[2.5rem] shadow-2xl p-8 animate-in zoom-in duration-300">
+          <div className="bg-white dark:bg-slate-900 w-full max-w-md rounded-[2.5rem] shadow-2xl p-8 animate-in zoom-in duration-300">
             <div className="flex justify-between items-center mb-8">
               <h3 className="text-2xl font-bold text-slate-900">Add to Board</h3>
               <button 

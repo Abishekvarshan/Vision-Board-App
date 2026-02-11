@@ -63,7 +63,7 @@ export const Planner: React.FC<Props> = ({ tasks, setTasks }) => {
         </div>
       </div>
 
-      <div className="bg-white rounded-3xl shadow-sm border border-slate-100 p-6 space-y-6">
+      <div className="bg-white dark:bg-slate-900 rounded-3xl shadow-sm border border-slate-100 dark:border-slate-800 p-6 space-y-6">
         <div className="w-full bg-slate-100 h-2 rounded-full overflow-hidden">
           <div className="bg-indigo-500 h-full transition-all duration-500" style={{ width: `${progress}%` }} />
         </div>

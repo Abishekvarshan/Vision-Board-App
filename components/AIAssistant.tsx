@@ -70,7 +70,7 @@ export const AIAssistant: React.FC<Props> = ({ visionItems, tasks }) => {
         {messages.map((m, i) => (
           <div key={i} className={`flex ${m.role === 'user' ? 'justify-end' : 'justify-start'}`}>
             <div className={`max-w-[80%] p-4 rounded-2xl flex gap-3 ${
-              m.role === 'user' ? 'bg-indigo-600 text-white rounded-tr-none' : 'bg-white border border-slate-100 text-slate-700 rounded-tl-none'
+              m.role === 'user' ? 'bg-indigo-600 text-white rounded-tr-none' : 'bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 text-slate-700 dark:text-slate-200 rounded-tl-none'
             }`}>
               {m.role === 'ai' && <Bot className="w-5 h-5 shrink-0 text-indigo-500" />}
               <p className="text-sm leading-relaxed">{m.text}</p>
@@ -80,7 +80,7 @@ export const AIAssistant: React.FC<Props> = ({ visionItems, tasks }) => {
         ))}
         {isLoading && (
           <div className="flex justify-start">
-            <div className="bg-white border border-slate-100 p-4 rounded-2xl flex gap-3">
+            <div className="bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 p-4 rounded-2xl flex gap-3">
               <Loader2 className="w-5 h-5 animate-spin text-indigo-500" />
               <p className="text-sm text-slate-400">Reflecting on your vision...</p>
             </div>
