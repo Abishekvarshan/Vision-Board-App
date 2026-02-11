@@ -55,13 +55,13 @@ const App: React.FC = () => {
           <Layout className="w-6 h-6" /> VisionFlow
         </h1>
         <div className="flex gap-8">
-          <button onClick={() => setActiveTab('vision')} className={`flex items-center gap-2 font-medium ${activeTab === 'vision' ? 'text-indigo-600' : 'text-slate-500'}`}>
+          <button onClick={() => setActiveTab('vision')} className={`flex items-center gap-2 font-medium transition-colors ${activeTab === 'vision' ? 'text-indigo-600' : 'text-slate-500 hover:text-slate-800'}`}>
             <LayoutGrid className="w-4 h-4" /> Vision Board
           </button>
-          <button onClick={() => setActiveTab('planner')} className={`flex items-center gap-2 font-medium ${activeTab === 'planner' ? 'text-indigo-600' : 'text-slate-500'}`}>
+          <button onClick={() => setActiveTab('planner')} className={`flex items-center gap-2 font-medium transition-colors ${activeTab === 'planner' ? 'text-indigo-600' : 'text-slate-500 hover:text-slate-800'}`}>
             <CheckSquare className="w-4 h-4" /> Daily Planner
           </button>
-          <button onClick={() => setActiveTab('progress')} className={`flex items-center gap-2 font-medium ${activeTab === 'progress' ? 'text-indigo-600' : 'text-slate-500'}`}>
+          <button onClick={() => setActiveTab('progress')} className={`flex items-center gap-2 font-medium transition-colors ${activeTab === 'progress' ? 'text-indigo-600' : 'text-slate-500 hover:text-slate-800'}`}>
             <BarChart3 className="w-4 h-4" /> Progress
           </button>
         </div>
@@ -95,17 +95,17 @@ const App: React.FC = () => {
 
       {/* Mobile Navigation */}
       <nav className="md:hidden fixed bottom-0 w-full glass border-t border-slate-200 flex justify-around items-center py-4 px-2 z-50">
-        <button onClick={() => setActiveTab('vision')} className={`flex flex-col items-center gap-1 ${activeTab === 'vision' ? 'text-indigo-600' : 'text-slate-500'}`}>
+        <button onClick={() => setActiveTab('vision')} className={`flex flex-col items-center gap-1 transition-all ${activeTab === 'vision' ? 'text-indigo-600 scale-110' : 'text-slate-400'}`}>
           <LayoutGrid className="w-6 h-6" />
-          <span className="text-[10px] font-medium uppercase tracking-wider">Vision</span>
+          <span className="text-[10px] font-bold uppercase tracking-wider">Vision</span>
         </button>
-        <button onClick={() => setActiveTab('planner')} className={`flex flex-col items-center gap-1 ${activeTab === 'planner' ? 'text-indigo-600' : 'text-slate-500'}`}>
+        <button onClick={() => setActiveTab('planner')} className={`flex flex-col items-center gap-1 transition-all ${activeTab === 'planner' ? 'text-indigo-600 scale-110' : 'text-slate-400'}`}>
           <CheckSquare className="w-6 h-6" />
-          <span className="text-[10px] font-medium uppercase tracking-wider">Plan</span>
+          <span className="text-[10px] font-bold uppercase tracking-wider">Plan</span>
         </button>
-        <button onClick={() => setActiveTab('progress')} className={`flex flex-col items-center gap-1 ${activeTab === 'progress' ? 'text-indigo-600' : 'text-slate-500'}`}>
+        <button onClick={() => setActiveTab('progress')} className={`flex flex-col items-center gap-1 transition-all ${activeTab === 'progress' ? 'text-indigo-600 scale-110' : 'text-slate-400'}`}>
           <BarChart3 className="w-6 h-6" />
-          <span className="text-[10px] font-medium uppercase tracking-wider">Growth</span>
+          <span className="text-[10px] font-bold uppercase tracking-wider">Growth</span>
         </button>
       </nav>
     </div>
