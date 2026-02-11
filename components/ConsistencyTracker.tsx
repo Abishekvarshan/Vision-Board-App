@@ -14,24 +14,30 @@ export const ConsistencyTracker: React.FC<Props> = ({
   longestStreak,
 }) => {
   const { weeks, monthLabels, monthStarts, dayLabels } = useMemo(() => {
-    const today = new Date();
-    const end = new Date(today);
+    const now = new Date();
+    const year = now.getFullYear();
+
+    // Show current year (Jan 1 -> Dec 31)
+    const start = new Date(year, 0, 1);
+    start.setHours(0, 0, 0, 0);
+    const end = new Date(year, 11, 31);
     end.setHours(0, 0, 0, 0);
 
-    // Start date: go back ~52 weeks and align to Sunday (GitHub-like)
-    const start = new Date(end);
-    start.setDate(start.getDate() - 364);
-    start.setHours(0, 0, 0, 0);
-    const day = start.getDay(); // 0=Sun
-    start.setDate(start.getDate() - day);
+    // Align the grid to Sunday so weeks render like GitHub.
+    // (This may include a few blank days before Jan 1 and/or after Dec 31.)
+    const startGrid = new Date(start);
+    startGrid.setDate(startGrid.getDate() - startGrid.getDay());
+    const endGrid = new Date(end);
+    endGrid.setDate(endGrid.getDate() + (6 - endGrid.getDay()));
 
     const formatDate = (d: Date) => d.toISOString().split('T')[0];
 
     const days: { date: string; count: number; jsDate: Date }[] = [];
-    const cursor = new Date(start);
-    while (cursor <= end) {
+    const cursor = new Date(startGrid);
+    while (cursor <= endGrid) {
       const dateStr = formatDate(cursor);
-      const activity = activities.find(a => a.date === dateStr);
+      const inYearRange = cursor >= start && cursor <= end;
+      const activity = inYearRange ? activities.find(a => a.date === dateStr) : undefined;
       days.push({ date: dateStr, count: activity ? activity.count : 0, jsDate: new Date(cursor) });
       cursor.setDate(cursor.getDate() + 1);
     }
@@ -45,15 +51,12 @@ export const ConsistencyTracker: React.FC<Props> = ({
 
     // Month labels: show label when month changes at the start of a week
     const monthFmt = new Intl.DateTimeFormat(undefined, { month: 'short' });
-    const monthStarts = weeks.map((week, idx) => {
-      const firstDay = week[0].jsDate;
-      const prevFirst = idx > 0 ? weeks[idx - 1][0].jsDate : null;
-      return !prevFirst || prevFirst.getMonth() !== firstDay.getMonth() || prevFirst.getFullYear() !== firstDay.getFullYear();
-    });
-
+    // Place month label at the week that contains the 1st of the month (GitHub-like)
+    const monthStarts = weeks.map((week) => week.some((d) => d.jsDate.getDate() === 1));
     const monthLabels = weeks.map((week, idx) => {
       if (!monthStarts[idx]) return '';
-      return monthFmt.format(week[0].jsDate);
+      const d1 = week.find((d) => d.jsDate.getDate() === 1);
+      return d1 ? monthFmt.format(d1.jsDate) : '';
     });
 
     // Day labels on the left (GitHub shows Mon/Wed/Fri typically)
