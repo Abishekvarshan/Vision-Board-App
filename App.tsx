@@ -75,7 +75,7 @@ const App: React.FC = () => {
         if (uid !== user.uid) setUid(user.uid);
 
         return (
-          <div className="min-h-screen bg-slate-50 pb-24 md:pb-0 md:pt-16">
+          <div className="min-h-screen bg-slate-50 dark:bg-slate-950 pb-24 md:pb-0 md:pt-16">
             {/* Top Header - Desktop Only */}
             <header className="hidden md:flex fixed top-0 w-full glass border-b border-slate-200 z-50 px-8 py-4 justify-between items-center">
               <h1 className="text-xl font-bold text-indigo-600 tracking-tight flex items-center gap-2">
