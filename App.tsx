@@ -1,12 +1,18 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { VisionBoard } from './components/VisionBoard';
 import { Planner } from './components/Planner';
 import { ConsistencyTracker } from './components/ConsistencyTracker';
 import { Layout, LayoutGrid, CheckSquare, BarChart3 } from 'lucide-react';
 import { VisionItem, Task, Activity } from './types';
+import { onAuthStateChanged, signInAnonymously } from 'firebase/auth';
+import { auth } from './src/firebase';
+import { getUserStreak, recordActivityForUser, StreakDoc } from './src/streak';
 
 const App: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'vision' | 'planner' | 'progress'>('vision');
+
+  const [uid, setUid] = useState<string | null>(null);
+  const [streak, setStreak] = useState<StreakDoc | null>(null);
   
   // Persistence logic
   const [visionItems, setVisionItems] = useState<VisionItem[]>(() => {
@@ -36,7 +42,29 @@ const App: React.FC = () => {
     localStorage.setItem('activity_history', JSON.stringify(activities));
   }, [activities]);
 
-  const logActivity = (date?: string) => {
+  // Auth bootstrap (Anonymous)
+  useEffect(() => {
+    const unsub = onAuthStateChanged(auth, (user) => {
+      setUid(user?.uid ?? null);
+    });
+
+    // Ensure we have a user
+    signInAnonymously(auth).catch((err) => {
+      console.error('Anonymous sign-in failed', err);
+    });
+
+    return () => unsub();
+  }, []);
+
+  // Load streak from Firestore once we have a uid
+  useEffect(() => {
+    if (!uid) return;
+    getUserStreak(uid)
+      .then(setStreak)
+      .catch((err) => console.error('Failed to load streak', err));
+  }, [uid]);
+
+  const logActivity = useCallback((date?: string) => {
     const today = date || new Date().toISOString().split('T')[0];
     setActivities(prev => {
       const existing = prev.find(a => a.date === today);
@@ -45,7 +73,15 @@ const App: React.FC = () => {
       }
       return [...prev, { date: today, count: 1 }];
     });
-  };
+
+    // Firestore streak update (best-effort; keep app usable offline)
+    if (uid) {
+      recordActivityForUser(uid, today)
+        .then(() => getUserStreak(uid))
+        .then(setStreak)
+        .catch((err) => console.error('Failed to record streak', err));
+    }
+  }, [uid]);
 
   return (
     <div className="min-h-screen bg-slate-50 pb-24 md:pb-0 md:pt-16">
@@ -89,7 +125,11 @@ const App: React.FC = () => {
           />
         )}
         {activeTab === 'progress' && (
-          <ConsistencyTracker activities={activities} />
+          <ConsistencyTracker
+            activities={activities}
+            currentStreak={streak?.currentStreak}
+            longestStreak={streak?.longestStreak}
+          />
         )}
       </main>
 

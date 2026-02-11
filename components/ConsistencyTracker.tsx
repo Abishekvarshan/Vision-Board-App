@@ -4,9 +4,15 @@ import { Activity } from '../types';
 
 interface Props {
   activities: Activity[];
+  currentStreak?: number;
+  longestStreak?: number;
 }
 
-export const ConsistencyTracker: React.FC<Props> = ({ activities }) => {
+export const ConsistencyTracker: React.FC<Props> = ({
+  activities,
+  currentStreak,
+  longestStreak,
+}) => {
   const heatmapData = useMemo(() => {
     const data = [];
     const today = new Date();
@@ -81,7 +87,16 @@ export const ConsistencyTracker: React.FC<Props> = ({ activities }) => {
         </div>
         <div className="bg-white p-6 rounded-3xl shadow-sm border border-slate-100">
           <p className="text-sm font-bold text-slate-400 uppercase mb-1">Current Streak</p>
-          <p className="text-4xl font-black text-slate-900">12 Days</p>
+          <p className="text-4xl font-black text-slate-900">
+            {typeof currentStreak === 'number' ? `${currentStreak} Days` : '—'}
+          </p>
+        </div>
+
+        <div className="bg-white p-6 rounded-3xl shadow-sm border border-slate-100">
+          <p className="text-sm font-bold text-slate-400 uppercase mb-1">Longest Streak</p>
+          <p className="text-4xl font-black text-indigo-600">
+            {typeof longestStreak === 'number' ? `${longestStreak} Days` : '—'}
+          </p>
         </div>
       </div>
     </div>
