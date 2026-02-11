@@ -13,68 +13,51 @@ export const ConsistencyTracker: React.FC<Props> = ({
   currentStreak,
   longestStreak,
 }) => {
-  const { weeks, monthLabels, monthStarts, dayLabels } = useMemo(() => {
+  const { year, months } = useMemo(() => {
     const now = new Date();
     const year = now.getFullYear();
 
-    // Show current year (Jan 1 -> Dec 31)
-    const start = new Date(year, 0, 1);
-    start.setHours(0, 0, 0, 0);
-    const end = new Date(year, 11, 31);
-    end.setHours(0, 0, 0, 0);
-
-    // Align the grid to Sunday so weeks render like GitHub.
-    // (This may include a few blank days before Jan 1 and/or after Dec 31.)
-    const startGrid = new Date(start);
-    startGrid.setDate(startGrid.getDate() - startGrid.getDay());
-    const endGrid = new Date(end);
-    endGrid.setDate(endGrid.getDate() + (6 - endGrid.getDay()));
+    const activityMap = new Map<string, number>();
+    for (const a of activities) activityMap.set(a.date, a.count);
 
     const formatDate = (d: Date) => d.toISOString().split('T')[0];
+    const monthNameFmt = new Intl.DateTimeFormat(undefined, { month: 'short' });
 
-    const days: { date: string; count: number; jsDate: Date }[] = [];
-    const cursor = new Date(startGrid);
-    while (cursor <= endGrid) {
-      const dateStr = formatDate(cursor);
-      const inYearRange = cursor >= start && cursor <= end;
-      const activity = inYearRange ? activities.find(a => a.date === dateStr) : undefined;
-      days.push({ date: dateStr, count: activity ? activity.count : 0, jsDate: new Date(cursor) });
-      cursor.setDate(cursor.getDate() + 1);
-    }
+    const months = Array.from({ length: 12 }).map((_, monthIdx) => {
+      const first = new Date(year, monthIdx, 1);
+      const last = new Date(year, monthIdx + 1, 0);
 
-    // Group into weeks (columns). Each week has 7 days (rows).
-    const weeks: { date: string; count: number; jsDate: Date }[][] = [];
-    for (let i = 0; i < days.length; i += 7) {
-      const week = days.slice(i, i + 7);
-      if (week.length === 7) weeks.push(week);
-    }
+      const startDow = first.getDay(); // 0=Sun
+      const totalDays = last.getDate();
+      const totalCells = startDow + totalDays;
+      const weeksCount = Math.ceil(totalCells / 7);
 
-    // Month labels: show label when month changes at the start of a week
-    const monthFmt = new Intl.DateTimeFormat(undefined, { month: 'short' });
-    // Place month label at the week that contains the 1st of the month (GitHub-like)
-    const monthStarts = weeks.map((week) => week.some((d) => d.jsDate.getDate() === 1));
-    const monthLabels = weeks.map((week, idx) => {
-      if (!monthStarts[idx]) return '';
-      const d1 = week.find((d) => d.jsDate.getDate() === 1);
-      return d1 ? monthFmt.format(d1.jsDate) : '';
+      const cells = Array.from({ length: weeksCount * 7 }).map((__, i) => {
+        const dayNum = i - startDow + 1;
+        if (dayNum < 1 || dayNum > totalDays) return { inMonth: false as const, date: '', count: 0 };
+        const d = new Date(year, monthIdx, dayNum);
+        const date = formatDate(d);
+        const count = activityMap.get(date) ?? 0;
+        return { inMonth: true as const, date, count };
+      });
+
+      return {
+        monthIdx,
+        label: monthNameFmt.format(first),
+        weeksCount,
+        cells,
+      };
     });
 
-    // Day labels on the left (GitHub shows Mon/Wed/Fri typically)
-    const dayLabels = [
-      { row: 1, label: 'Mon' },
-      { row: 3, label: 'Wed' },
-      { row: 5, label: 'Fri' },
-    ];
-
-    return { weeks, monthLabels, monthStarts, dayLabels };
+    return { year, months };
   }, [activities]);
 
   const CELL = 12;
   const GAP = 3;
-  const MONTH_GAP = 8;
 
-  const getColor = (count: number) => {
-    if (count === 0) return 'bg-slate-100';
+  const getColor = (count: number, inMonth: boolean) => {
+    if (!inMonth) return 'bg-transparent';
+    if (count === 0) return 'bg-slate-100 dark:bg-slate-800';
     if (count <= 1) return 'bg-indigo-200';
     if (count <= 3) return 'bg-indigo-400';
     if (count <= 5) return 'bg-indigo-600';
@@ -89,61 +72,47 @@ export const ConsistencyTracker: React.FC<Props> = ({
       </div>
 
       <div className="bg-white dark:bg-slate-900 p-8 rounded-3xl shadow-sm border border-slate-100 dark:border-slate-800 overflow-x-auto">
-        {/* Month labels */}
-        <div className="flex min-w-max pl-10 mb-2">
-          {monthLabels.map((label, idx) => (
-            <div
-              key={idx}
-              style={{
-                width: CELL,
-                marginRight: idx === monthLabels.length - 1 ? 0 : GAP,
-                marginLeft: monthStarts[idx] && idx !== 0 ? MONTH_GAP : 0,
-              }}
-              className="text-[10px] font-semibold text-slate-400"
-            >
-              {label}
-            </div>
-          ))}
+        <div className="flex items-center justify-between gap-4 mb-6">
+          <div>
+            <div className="text-sm font-bold text-slate-900 dark:text-slate-100">{year}</div>
+            <div className="text-xs text-slate-500 dark:text-slate-400">Monthly calendars (28/30/31 days)</div>
+          </div>
         </div>
 
-        {/* Grid with day labels */}
-        <div className="flex gap-2 min-w-max">
-          <div className="w-8 flex flex-col" style={{ gap: GAP }}>
-            {Array.from({ length: 7 }).map((_, row) => {
-              const dl = dayLabels.find(d => d.row === row);
-              return (
-                <div key={row} className="text-[10px] text-slate-400" style={{ height: CELL, lineHeight: `${CELL}px` }}>
-                  {dl ? dl.label : ''}
-                </div>
-              );
-            })}
-          </div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+          {months.map((m) => (
+            <div key={m.monthIdx} className="bg-white/60 dark:bg-slate-950/30 border border-slate-100 dark:border-slate-800 rounded-3xl p-5">
+              <div className="flex items-baseline justify-between">
+                <div className="text-sm font-black text-slate-900 dark:text-slate-100">{m.label}</div>
+              </div>
 
-          <div className="flex" style={{ gap: GAP }}>
-            {weeks.map((week, wIdx) => (
-              <div
-                key={wIdx}
-                className="flex flex-col"
-                style={{
-                  gap: GAP,
-                  marginLeft: monthStarts[wIdx] && wIdx !== 0 ? MONTH_GAP : 0,
-                }}
-              >
-                {week.map((day, dIdx) => (
+              {/* Weekday header */}
+              <div className="grid grid-cols-7 mt-3 text-[10px] font-semibold text-slate-400" style={{ gap: GAP }}>
+                {['S', 'M', 'T', 'W', 'T', 'F', 'S'].map((d) => (
+                  <div key={d} className="text-center" style={{ width: CELL }}>
+                    {d}
+                  </div>
+                ))}
+              </div>
+
+              {/* Calendar grid */}
+              <div className="grid grid-cols-7 mt-2" style={{ gap: GAP }}>
+                {m.cells.map((c, idx) => (
                   <div
-                    key={dIdx}
-                    title={`${day.date}: ${day.count} activities`}
-                    className={`rounded-[2px] cursor-help transition-all hover:ring-2 hover:ring-indigo-300 ${getColor(day.count)}`}
+                    key={idx}
+                    title={c.inMonth ? `${c.date}: ${c.count} activities` : ''}
+                    className={`rounded-[2px] ${c.inMonth ? 'cursor-help hover:ring-2 hover:ring-indigo-300' : ''} ${getColor(c.count, c.inMonth)}`}
                     style={{ width: CELL, height: CELL }}
                   />
                 ))}
               </div>
-            ))}
-          </div>
+            </div>
+          ))}
         </div>
+
         <div className="mt-6 flex items-center justify-end gap-2 text-xs text-slate-400 font-medium">
           <span>Less</span>
-          <div className="w-3 h-3 rounded-[2px] bg-slate-100" />
+          <div className="w-3 h-3 rounded-[2px] bg-slate-100 dark:bg-slate-800" />
           <div className="w-3 h-3 rounded-[2px] bg-indigo-200" />
           <div className="w-3 h-3 rounded-[2px] bg-indigo-400" />
           <div className="w-3 h-3 rounded-[2px] bg-indigo-600" />
