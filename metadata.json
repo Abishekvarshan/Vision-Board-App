@@ -1,0 +1,7 @@
+{
+  "name": "VisionFlow: Boards & Planner",
+  "description": "A minimalist productivity suite combining a visual vision board with a daily planner and a GitHub-style consistency tracker.",
+  "requestFramePermissions": [
+    "camera"
+  ]
+}
