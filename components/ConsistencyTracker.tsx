@@ -88,8 +88,8 @@ export const ConsistencyTracker: React.FC<Props> = ({
 
               {/* Weekday header */}
               <div className="grid grid-cols-7 mt-3 text-[10px] font-semibold text-slate-400" style={{ gap: GAP }}>
-                {['S', 'M', 'T', 'W', 'T', 'F', 'S'].map((d) => (
-                  <div key={d} className="text-center" style={{ width: CELL }}>
+                {['S', 'M', 'T', 'W', 'T', 'F', 'S'].map((d, i) => (
+                  <div key={`${d}-${i}`} className="text-center" style={{ width: CELL }}>
                     {d}
                   </div>
                 ))}
