@@ -1,6 +1,7 @@
 
 import React, { useMemo } from 'react';
 import { Activity } from '../types';
+import { toLocalISODate } from '../src/date';
 
 interface Props {
   activities: Activity[];
@@ -20,7 +21,7 @@ export const ConsistencyTracker: React.FC<Props> = ({
     const activityMap = new Map<string, number>();
     for (const a of activities) activityMap.set(a.date, a.count);
 
-    const formatDate = (d: Date) => d.toISOString().split('T')[0];
+    const formatDate = (d: Date) => toLocalISODate(d);
     const monthNameFmt = new Intl.DateTimeFormat(undefined, { month: 'short' });
 
     const months = Array.from({ length: 12 }).map((_, monthIdx) => {
@@ -143,7 +144,9 @@ export const ConsistencyTracker: React.FC<Props> = ({
         <div className="space-y-6">
           <div className="bg-white dark:bg-slate-900 p-6 rounded-3xl shadow-sm border border-slate-100 dark:border-slate-800">
             <p className="text-sm font-bold text-slate-400 uppercase mb-1">Total Activities</p>
-            <p className="text-4xl font-black text-slate-900 dark:text-slate-100">{activities.reduce((acc, curr) => acc + curr.count, 0)}</p>
+            <p className="text-4xl font-black text-slate-900 dark:text-slate-100">
+              {activities.reduce((acc, curr) => acc + (Number.isFinite(curr.count) ? curr.count : 0), 0)}
+            </p>
           </div>
           <div className="bg-white dark:bg-slate-900 p-6 rounded-3xl shadow-sm border border-slate-100 dark:border-slate-800">
             <p className="text-sm font-bold text-slate-400 uppercase mb-1">Active Days</p>

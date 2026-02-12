@@ -17,7 +17,6 @@ export const VisionBoard: React.FC<Props> = ({ items, onAddItem, onDeleteItem })
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
-  const [caption, setCaption] = useState('');
   const [category, setCategory] = useState<Category>('Personal');
   const [isUploading, setIsUploading] = useState(false);
 
@@ -67,7 +66,7 @@ export const VisionBoard: React.FC<Props> = ({ items, onAddItem, onDeleteItem })
       onAddItem({
         id: crypto.randomUUID(),
         url: uploadedUrl,
-        caption,
+        caption: '',
         category,
         createdAt: Date.now()
       });
@@ -83,7 +82,6 @@ export const VisionBoard: React.FC<Props> = ({ items, onAddItem, onDeleteItem })
   const resetForm = () => {
     setSelectedFile(null);
     setPreviewUrl(null);
-    setCaption('');
     setIsModalOpen(false);
   };
 
@@ -94,15 +92,20 @@ export const VisionBoard: React.FC<Props> = ({ items, onAddItem, onDeleteItem })
           <h2 className="text-3xl font-bold text-slate-900 dark:text-slate-100 tracking-tight">Vision Board</h2>
           <p className="text-slate-500 dark:text-slate-400">Visualize your journey to the person you want to become.</p>
         </div>
-        <button 
-          onClick={() => setIsModalOpen(true)}
-          className="flex items-center justify-center gap-2 bg-indigo-600 text-white px-5 py-2.5 rounded-2xl hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-200 active:scale-95"
-        >
-          <Plus className="w-5 h-5" /> Add Vision
-        </button>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
+      {/* Floating action button (bottom-left) */}
+      <button
+        type="button"
+        onClick={() => setIsModalOpen(true)}
+        aria-label="Add vision"
+        className="fixed bottom-24 left-4 md:bottom-6 md:left-6 z-[55] inline-flex h-12 w-12 items-center justify-center rounded-full bg-indigo-600 text-white shadow-xl shadow-indigo-200 hover:bg-indigo-700 active:scale-95 transition-all"
+      >
+        <Plus className="w-6 h-6" />
+      </button>
+
+      {/* Pinterest-style masonry layout */}
+      <div className="columns-1 sm:columns-2 lg:columns-3 gap-6 [column-fill:_balance]">
         {items.length === 0 ? (
           <div className="col-span-full py-32 border-2 border-dashed border-slate-200 dark:border-slate-800 rounded-[2.5rem] flex flex-col items-center justify-center text-slate-400 bg-white/50 dark:bg-slate-900/30">
             <div className="p-5 bg-slate-100 dark:bg-slate-800 rounded-full mb-4">
@@ -113,26 +116,22 @@ export const VisionBoard: React.FC<Props> = ({ items, onAddItem, onDeleteItem })
           </div>
         ) : (
           items.map(item => (
-            <div key={item.id} className="group relative bg-white dark:bg-slate-900 rounded-[2rem] overflow-hidden shadow-sm hover:shadow-2xl hover:-translate-y-1 transition-all duration-500 border border-slate-100 dark:border-slate-800">
-              <div className="aspect-[4/3] overflow-hidden bg-slate-100">
-                <img src={item.url} alt={item.caption} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" />
-              </div>
-              <div className="absolute top-4 left-4">
-                <span className="px-3 py-1 bg-white/90 backdrop-blur-md rounded-full text-[10px] font-bold uppercase tracking-wider text-indigo-600 shadow-sm border border-white/50">
-                  {item.category}
-                </span>
-              </div>
-              <button 
-                onClick={() => onDeleteItem(item.id)}
-                className="absolute top-4 right-4 p-2 bg-white/90 backdrop-blur-md text-red-500 rounded-full opacity-0 group-hover:opacity-100 transition-all hover:bg-red-50"
-              >
-                <Trash2 className="w-4 h-4" />
-              </button>
-              <div className="p-5">
-                <p className="font-semibold text-slate-800 dark:text-slate-100 line-clamp-2 leading-snug">{item.caption || 'Future Goal'}</p>
-                <p className="text-[10px] text-slate-400 mt-2 uppercase font-bold tracking-widest">
-                  {new Date(item.createdAt).toLocaleDateString()}
-                </p>
+            <div key={item.id} className="mb-6 break-inside-avoid">
+              <div className="group relative bg-white dark:bg-slate-900 rounded-[1.75rem] overflow-hidden shadow-sm hover:shadow-2xl transition-all duration-500 border border-slate-100 dark:border-slate-800">
+                <img
+                  src={item.url}
+                  alt="Vision"
+                  className="w-full h-auto object-cover group-hover:scale-[1.02] transition-transform duration-500"
+                  loading="lazy"
+                />
+
+                <button
+                  onClick={() => onDeleteItem(item.id)}
+                  className="absolute top-3 right-3 p-2 bg-white/90 backdrop-blur-md text-red-500 rounded-full opacity-0 group-hover:opacity-100 transition-all hover:bg-red-50"
+                  aria-label="Delete"
+                >
+                  <Trash2 className="w-4 h-4" />
+                </button>
               </div>
             </div>
           ))
@@ -177,17 +176,6 @@ export const VisionBoard: React.FC<Props> = ({ items, onAddItem, onDeleteItem })
                     <input type="file" accept="image/*" className="hidden" onChange={handleFileChange} />
                   </label>
                 )}
-              </div>
-
-              <div>
-                <label className="block text-xs font-black text-slate-400 uppercase tracking-widest mb-2">The Vision</label>
-                <input 
-                  type="text" 
-                  value={caption}
-                  onChange={(e) => setCaption(e.target.value)}
-                  placeholder="What does this represent?"
-                  className="w-full px-5 py-3 bg-slate-50 dark:bg-slate-950 border border-slate-100 dark:border-slate-800 rounded-2xl focus:outline-none focus:ring-4 focus:ring-indigo-500/10 focus:bg-white dark:focus:bg-slate-950 transition-all text-slate-800 dark:text-slate-100 placeholder:text-slate-400 dark:placeholder:text-slate-500"
-                />
               </div>
 
               <div>

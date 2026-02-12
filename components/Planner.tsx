@@ -2,15 +2,17 @@
 import React, { useState, useMemo } from 'react';
 import { CheckCircle2, Circle, Plus, Trash2, Calendar as CalendarIcon } from 'lucide-react';
 import { Task } from '../types';
+import { toLocalISODate } from '../src/date';
 
 interface Props {
   tasks: Task[];
   setTasks: (tasks: Task[]) => void;
+  onAddTaskActivity?: (isoDate?: string) => void;
 }
 
-export const Planner: React.FC<Props> = ({ tasks, setTasks }) => {
+export const Planner: React.FC<Props> = ({ tasks, setTasks, onAddTaskActivity }) => {
   const [newTaskText, setNewTaskText] = useState('');
-  const [filterDate, setFilterDate] = useState(new Date().toISOString().split('T')[0]);
+  const [filterDate, setFilterDate] = useState(toLocalISODate(new Date()));
 
   const dailyTasks = useMemo(() => {
     return tasks.filter(t => t.date === filterDate);
@@ -27,11 +29,15 @@ export const Planner: React.FC<Props> = ({ tasks, setTasks }) => {
       date: filterDate
     };
 
+    // Count an activity only when user adds a new task.
+    onAddTaskActivity?.(filterDate);
+
     setTasks([...tasks, newTask]);
     setNewTaskText('');
   };
 
   const toggleTask = (id: string) => {
+    // Do NOT count an activity when checking/unchecking tasks.
     setTasks(tasks.map(t => t.id === id ? { ...t, completed: !t.completed } : t));
   };
 

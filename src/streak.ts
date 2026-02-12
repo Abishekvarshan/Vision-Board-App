@@ -1,5 +1,6 @@
 import { doc, getDoc, serverTimestamp, runTransaction } from 'firebase/firestore';
 import { db } from './firebase';
+import { fromISODateLocal, toLocalISODate } from './date';
 
 export type StreakDoc = {
   currentStreak: number;
@@ -9,7 +10,6 @@ export type StreakDoc = {
   createdAt?: unknown;
 };
 
-const toISODate = (d: Date) => d.toISOString().split('T')[0];
 const addDays = (d: Date, days: number) => {
   const copy = new Date(d);
   copy.setDate(copy.getDate() + days);
@@ -34,7 +34,7 @@ export async function getUserStreak(uid: string): Promise<StreakDoc> {
  */
 export async function recordActivityForUser(uid: string, activityDateISO?: string) {
   const ref = userStreakRef(uid);
-  const todayISO = activityDateISO ?? toISODate(new Date());
+  const todayISO = activityDateISO ?? toLocalISODate(new Date());
 
   await runTransaction(db, async (tx) => {
     const snap = await tx.get(ref);
@@ -51,8 +51,8 @@ export async function recordActivityForUser(uid: string, activityDateISO?: strin
       // already counted today
       nextCurrent = prev.currentStreak;
     } else {
-      const lastDate = new Date(last + 'T00:00:00');
-      const expectedNext = toISODate(addDays(lastDate, 1));
+      const lastDate = fromISODateLocal(last);
+      const expectedNext = toLocalISODate(addDays(lastDate, 1));
       if (expectedNext === todayISO) nextCurrent = prev.currentStreak + 1;
       else nextCurrent = 1;
     }

@@ -6,6 +6,7 @@ import { Planner } from './components/Planner';
 import { VisionBoard } from './components/VisionBoard';
 import { Activity, Task, VisionItem } from './types';
 import { getUserStreak, recordActivityForUser, StreakDoc } from './src/streak';
+import { toLocalISODate } from './src/date';
 import type { User } from 'firebase/auth';
 
 const AuthedApp: React.FC<{ user: User }> = ({ user }) => {
@@ -48,7 +49,7 @@ const AuthedApp: React.FC<{ user: User }> = ({ user }) => {
   }, [user.uid]);
 
   const logActivityWithUser = useCallback((date?: string) => {
-    const today = date || new Date().toISOString().split('T')[0];
+    const today = date || toLocalISODate(new Date());
 
     // local heatmap
     setActivities(prev => {
@@ -103,8 +104,8 @@ const AuthedApp: React.FC<{ user: User }> = ({ user }) => {
             tasks={tasks}
             setTasks={(newTasks) => {
               setTasks(newTasks);
-              if (newTasks.length >= tasks.length) logActivityWithUser();
             }}
+            onAddTaskActivity={(iso) => logActivityWithUser(iso)}
           />
         )}
         {activeTab === 'progress' && (
