@@ -105,7 +105,7 @@ export const VisionBoard: React.FC<Props> = ({ items, onAddItem, onDeleteItem })
       </button>
 
       {/* Pinterest-style masonry layout */}
-      <div className="columns-1 sm:columns-2 lg:columns-3 gap-6 [column-fill:_balance]">
+      <div className="columns-2 sm:columns-3 lg:columns-4 gap-4 [column-fill:_balance]">
         {items.length === 0 ? (
           <div className="col-span-full py-32 border-2 border-dashed border-slate-200 dark:border-slate-800 rounded-[2.5rem] flex flex-col items-center justify-center text-slate-400 bg-white/50 dark:bg-slate-900/30">
             <div className="p-5 bg-slate-100 dark:bg-slate-800 rounded-full mb-4">
@@ -116,7 +116,7 @@ export const VisionBoard: React.FC<Props> = ({ items, onAddItem, onDeleteItem })
           </div>
         ) : (
           items.map(item => (
-            <div key={item.id} className="mb-6 break-inside-avoid">
+            <div key={item.id} className="mb-4 break-inside-avoid">
               <div className="group relative bg-white dark:bg-slate-900 rounded-[1.75rem] overflow-hidden shadow-sm hover:shadow-2xl transition-all duration-500 border border-slate-100 dark:border-slate-800">
                 <img
                   src={item.url}
