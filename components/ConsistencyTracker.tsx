@@ -56,6 +56,12 @@ export const ConsistencyTracker: React.FC<Props> = ({
   const CELL = 12;
   const GAP = 3;
 
+  const todayISO = useMemo(() => toLocalISODate(new Date()), []);
+  const todayCount = useMemo(() => {
+    const a = activities.find((x) => x.date === todayISO);
+    return a && Number.isFinite(a.count) ? a.count : 0;
+  }, [activities, todayISO]);
+
   const getColor = (count: number, inMonth: boolean) => {
     if (!inMonth) return 'bg-transparent';
     if (count === 0) return 'bg-slate-100 dark:bg-slate-800';
@@ -143,9 +149,9 @@ export const ConsistencyTracker: React.FC<Props> = ({
         {/* Stats */}
         <div className="space-y-6">
           <div className="bg-white dark:bg-slate-900 p-6 rounded-3xl shadow-sm border border-slate-100 dark:border-slate-800">
-            <p className="text-sm font-bold text-slate-400 uppercase mb-1">Total Activities</p>
+            <p className="text-sm font-bold text-slate-400 uppercase mb-1">Today's Activities</p>
             <p className="text-4xl font-black text-slate-900 dark:text-slate-100">
-              {activities.reduce((acc, curr) => acc + (Number.isFinite(curr.count) ? curr.count : 0), 0)}
+              {todayCount}
             </p>
           </div>
           <div className="bg-white dark:bg-slate-900 p-6 rounded-3xl shadow-sm border border-slate-100 dark:border-slate-800">
