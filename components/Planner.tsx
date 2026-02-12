@@ -74,15 +74,15 @@ export const Planner: React.FC<Props> = ({ tasks, setTasks, onAddTaskActivity })
           <div className="bg-indigo-500 h-full transition-all duration-500" style={{ width: `${progress}%` }} />
         </div>
 
-        <form onSubmit={addTask} className="flex gap-2">
+        <form onSubmit={addTask} className="flex gap-2 w-full">
           <input 
             type="text" 
             value={newTaskText}
             onChange={(e) => setNewTaskText(e.target.value)}
             placeholder="Add a daily focus..."
-            className="flex-1 px-4 py-3 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-700 rounded-2xl focus:outline-none focus:ring-2 focus:ring-indigo-500 text-slate-800 dark:text-slate-100 placeholder:text-slate-400 dark:placeholder:text-slate-500"
+            className="flex-1 min-w-0 px-4 py-3 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-700 rounded-2xl focus:outline-none focus:ring-2 focus:ring-indigo-500 text-slate-800 dark:text-slate-100 placeholder:text-slate-400 dark:placeholder:text-slate-500"
           />
-          <button type="submit" className="p-3 bg-indigo-600 text-white rounded-2xl hover:bg-indigo-700 transition-colors">
+          <button type="submit" className="shrink-0 p-3 bg-indigo-600 text-white rounded-2xl hover:bg-indigo-700 transition-colors">
             <Plus className="w-6 h-6" />
           </button>
         </form>
