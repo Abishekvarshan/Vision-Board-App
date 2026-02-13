@@ -1,8 +1,9 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { Layout, LayoutGrid, CheckSquare, BarChart3 } from 'lucide-react';
+import { Layout, LayoutGrid, CheckSquare, BarChart3, Mic2 } from 'lucide-react';
 import { AuthGate } from './components/AuthGate';
 import { ConsistencyTracker } from './components/ConsistencyTracker';
 import { Planner } from './components/Planner';
+import { Podcast } from './components/Podcast';
 import { VisionBoard } from './components/VisionBoard';
 import { Activity, Task, VisionItem } from './types';
 import { getUserStreak, recordActivityForUser, StreakDoc } from './src/streak';
@@ -10,7 +11,7 @@ import { toLocalISODate } from './src/date';
 import type { User } from 'firebase/auth';
 
 const AuthedApp: React.FC<{ user: User }> = ({ user }) => {
-  const [activeTab, setActiveTab] = useState<'vision' | 'planner' | 'progress'>('vision');
+  const [activeTab, setActiveTab] = useState<'vision' | 'planner' | 'podcast' | 'progress'>('vision');
   const [streak, setStreak] = useState<StreakDoc | null>(null);
 
   // Persistence logic
@@ -81,6 +82,9 @@ const AuthedApp: React.FC<{ user: User }> = ({ user }) => {
           <button onClick={() => setActiveTab('planner')} className={`flex items-center gap-2 font-medium transition-colors ${activeTab === 'planner' ? 'text-indigo-600' : 'text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200'}`}>
             <CheckSquare className="w-4 h-4" /> Daily Planner
           </button>
+          <button onClick={() => setActiveTab('podcast')} className={`flex items-center gap-2 font-medium transition-colors ${activeTab === 'podcast' ? 'text-indigo-600' : 'text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200'}`}>
+            <Mic2 className="w-4 h-4" /> Podcast
+          </button>
           <button onClick={() => setActiveTab('progress')} className={`flex items-center gap-2 font-medium transition-colors ${activeTab === 'progress' ? 'text-indigo-600' : 'text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200'}`}>
             <BarChart3 className="w-4 h-4" /> Progress
           </button>
@@ -108,6 +112,9 @@ const AuthedApp: React.FC<{ user: User }> = ({ user }) => {
             onAddTaskActivity={(iso) => logActivityWithUser(iso)}
           />
         )}
+        {activeTab === 'podcast' && (
+          <Podcast />
+        )}
         {activeTab === 'progress' && (
           <ConsistencyTracker
             activities={activities}
@@ -126,6 +133,10 @@ const AuthedApp: React.FC<{ user: User }> = ({ user }) => {
         <button onClick={() => setActiveTab('planner')} className={`flex flex-col items-center gap-1 transition-all ${activeTab === 'planner' ? 'text-indigo-600 scale-110' : 'text-slate-400 dark:text-slate-500'}`}>
           <CheckSquare className="w-6 h-6" />
           <span className="text-[10px] font-bold uppercase tracking-wider">Plan</span>
+        </button>
+        <button onClick={() => setActiveTab('podcast')} className={`flex flex-col items-center gap-1 transition-all ${activeTab === 'podcast' ? 'text-indigo-600 scale-110' : 'text-slate-400 dark:text-slate-500'}`}>
+          <Mic2 className="w-6 h-6" />
+          <span className="text-[10px] font-bold uppercase tracking-wider">Audio</span>
         </button>
         <button onClick={() => setActiveTab('progress')} className={`flex flex-col items-center gap-1 transition-all ${activeTab === 'progress' ? 'text-indigo-600 scale-110' : 'text-slate-400 dark:text-slate-500'}`}>
           <BarChart3 className="w-6 h-6" />
