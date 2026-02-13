@@ -1,18 +1,22 @@
 
-import React, { useState, useMemo } from 'react';
-import { CheckCircle2, Circle, Plus, Trash2, Calendar as CalendarIcon } from 'lucide-react';
-import { Task } from '../types';
+import React, { useMemo, useState } from 'react';
+import { CheckCircle2, Circle, Plus, Trash2 } from 'lucide-react';
+import { Activity, Task } from '../types';
 import { toLocalISODate } from '../src/date';
 
 interface Props {
   tasks: Task[];
+  activities: Activity[];
   setTasks: (tasks: Task[]) => void;
   onAddTaskActivity?: (isoDate?: string) => void;
 }
 
-export const Planner: React.FC<Props> = ({ tasks, setTasks, onAddTaskActivity }) => {
+export const Planner: React.FC<Props> = ({ tasks, activities, setTasks, onAddTaskActivity }) => {
   const [newTaskText, setNewTaskText] = useState('');
-  const [filterDate, setFilterDate] = useState(toLocalISODate(new Date()));
+  const todayISO = useMemo(() => toLocalISODate(new Date()), []);
+  const [filterDate, setFilterDate] = useState(todayISO);
+
+  const isFutureDate = filterDate > todayISO;
 
   const dailyTasks = useMemo(() => {
     return tasks.filter(t => t.date === filterDate);
@@ -21,6 +25,7 @@ export const Planner: React.FC<Props> = ({ tasks, setTasks, onAddTaskActivity })
   const addTask = (e: React.FormEvent) => {
     e.preventDefault();
     if (!newTaskText.trim()) return;
+    if (isFutureDate) return;
 
     const newTask: Task = {
       id: crypto.randomUUID(),
@@ -49,6 +54,12 @@ export const Planner: React.FC<Props> = ({ tasks, setTasks, onAddTaskActivity })
     ? Math.round((dailyTasks.filter(t => t.completed).length / dailyTasks.length) * 100) 
     : 0;
 
+  const completedCount = useMemo(() => dailyTasks.filter((t) => t.completed).length, [dailyTasks]);
+  const activityCountForDay = useMemo(() => {
+    const a = activities.find((x) => x.date === filterDate);
+    return a && Number.isFinite(a.count) ? a.count : 0;
+  }, [activities, filterDate]);
+
   return (
     <div className="max-w-2xl mx-auto space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
       <div className="flex justify-between items-start">
@@ -60,11 +71,21 @@ export const Planner: React.FC<Props> = ({ tasks, setTasks, onAddTaskActivity })
            <input 
             type="date" 
             value={filterDate}
-            onChange={(e) => setFilterDate(e.target.value)}
+            max={todayISO}
+            onChange={(e) => {
+              const next = e.target.value;
+              // Only allow selecting today or past days.
+              if (!next) return;
+              if (next > todayISO) return;
+              setFilterDate(next);
+            }}
             className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 px-3 py-1 rounded-lg text-sm font-medium shadow-sm text-slate-800 dark:text-slate-100"
           />
           <div className="text-xs font-bold text-indigo-600 uppercase tracking-widest">
-            {progress}% Done
+            {completedCount}/{dailyTasks.length} Done ({progress}%)
+          </div>
+          <div className="text-[11px] font-bold text-slate-400 uppercase tracking-widest">
+            {activityCountForDay} Activities
           </div>
         </div>
       </div>
@@ -74,15 +95,26 @@ export const Planner: React.FC<Props> = ({ tasks, setTasks, onAddTaskActivity })
           <div className="bg-indigo-500 h-full transition-all duration-500" style={{ width: `${progress}%` }} />
         </div>
 
+        {isFutureDate && (
+          <div className="text-sm font-semibold text-amber-600">
+            Future days are disabled — select today or a past date.
+          </div>
+        )}
+
         <form onSubmit={addTask} className="flex gap-2 w-full">
           <input 
             type="text" 
             value={newTaskText}
             onChange={(e) => setNewTaskText(e.target.value)}
             placeholder="Add a daily focus..."
+            disabled={isFutureDate}
             className="flex-1 min-w-0 px-4 py-3 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-700 rounded-2xl focus:outline-none focus:ring-2 focus:ring-indigo-500 text-slate-800 dark:text-slate-100 placeholder:text-slate-400 dark:placeholder:text-slate-500"
           />
-          <button type="submit" className="shrink-0 p-3 bg-indigo-600 text-white rounded-2xl hover:bg-indigo-700 transition-colors">
+          <button
+            type="submit"
+            disabled={isFutureDate}
+            className="shrink-0 p-3 bg-indigo-600 text-white rounded-2xl hover:bg-indigo-700 transition-colors disabled:opacity-50 disabled:hover:bg-indigo-600"
+          >
             <Plus className="w-6 h-6" />
           </button>
         </form>

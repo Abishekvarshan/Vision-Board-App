@@ -106,6 +106,7 @@ const AuthedApp: React.FC<{ user: User }> = ({ user }) => {
         {activeTab === 'planner' && (
           <Planner
             tasks={tasks}
+            activities={activities}
             setTasks={(newTasks) => {
               setTasks(newTasks);
             }}
@@ -134,13 +135,14 @@ const AuthedApp: React.FC<{ user: User }> = ({ user }) => {
           <CheckSquare className="w-6 h-6" />
           <span className="text-[10px] font-bold uppercase tracking-wider">Plan</span>
         </button>
-        <button onClick={() => setActiveTab('podcast')} className={`flex flex-col items-center gap-1 transition-all ${activeTab === 'podcast' ? 'text-indigo-600 scale-110' : 'text-slate-400 dark:text-slate-500'}`}>
-          <Mic2 className="w-6 h-6" />
-          <span className="text-[10px] font-bold uppercase tracking-wider">Audio</span>
-        </button>
+       
         <button onClick={() => setActiveTab('progress')} className={`flex flex-col items-center gap-1 transition-all ${activeTab === 'progress' ? 'text-indigo-600 scale-110' : 'text-slate-400 dark:text-slate-500'}`}>
           <BarChart3 className="w-6 h-6" />
           <span className="text-[10px] font-bold uppercase tracking-wider">Growth</span>
+        </button>
+         <button onClick={() => setActiveTab('podcast')} className={`flex flex-col items-center gap-1 transition-all ${activeTab === 'podcast' ? 'text-indigo-600 scale-110' : 'text-slate-400 dark:text-slate-500'}`}>
+          <Mic2 className="w-6 h-6" />
+          <span className="text-[10px] font-bold uppercase tracking-wider">Podcast</span>
         </button>
       </nav>
     </div>
