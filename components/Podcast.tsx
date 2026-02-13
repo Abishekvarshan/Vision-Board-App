@@ -4,6 +4,7 @@ import { Music, Pause, Play, RefreshCcw, Volume2 } from 'lucide-react';
 type MonkLink = {
   id: string;
   url: string;
+  title?: string;
   publishedAt?: string;
 };
 
@@ -161,7 +162,12 @@ export const Podcast: React.FC = () => {
       const data = (await res.json()) as Record<string, { url?: string; publishedAt?: string }> | null;
 
       const raw: MonkLink[] = Object.entries(data || {})
-        .map(([id, v]) => ({ id, url: String(v?.url || ''), publishedAt: v?.publishedAt }))
+        .map(([id, v]) => ({
+          id,
+          url: String(v?.url || ''),
+          title: (v as any)?.title ? String((v as any).title) : undefined,
+          publishedAt: v?.publishedAt,
+        }))
         .filter((x) => x.url && extractYouTubeId(x.url));
 
       // Deduplicate by YouTube video id (RTDB can contain duplicate pushes)
@@ -311,6 +317,14 @@ export const Podcast: React.FC = () => {
     else play();
   };
 
+  const getEpisodeTitle = (l: MonkLink | null): string => {
+    if (!l) return 'Select a session';
+    const t = (l.title || '').trim();
+    if (t) return t;
+    const vid = extractYouTubeId(l.url);
+    return vid ? `Episode: ${vid}` : toYouTubeWatchUrl(l.url);
+  };
+
   return (
     <div className="max-w-xl mx-auto space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
       <div className="flex items-center justify-between">
@@ -343,19 +357,19 @@ export const Podcast: React.FC = () => {
       </div>
 
       {/* Modern Player UI */}
-      <div className="bg-white dark:bg-slate-900 rounded-[2.5rem] shadow-xl border border-slate-100 dark:border-slate-800 p-8 space-y-8 relative overflow-hidden">
+      <div className="bg-white dark:bg-slate-900 rounded-[2.5rem] shadow-xl border border-slate-100 dark:border-slate-800 p-6 space-y-6 relative overflow-hidden">
         <div className="flex flex-col items-center text-center space-y-4">
-          <div className="w-48 h-48 bg-slate-100 dark:bg-slate-800 rounded-[2.5rem] flex items-center justify-center shadow-inner relative group overflow-hidden">
+          <div className="w-40 h-40 bg-slate-100 dark:bg-slate-800 rounded-[2.25rem] flex items-center justify-center shadow-inner relative group overflow-hidden">
             {activeVideoId ? (
               <img
                 src={`https://img.youtube.com/vi/${activeVideoId}/mqdefault.jpg`}
-                className="w-full h-full object-cover rounded-[2.5rem] opacity-85 group-hover:scale-110 transition-transform duration-700"
+                className="w-full h-full object-cover rounded-[2.25rem] opacity-85 group-hover:scale-110 transition-transform duration-700"
                 alt="Thumbnail"
               />
             ) : (
               <Music className="w-12 h-12 text-slate-300 dark:text-slate-600" />
             )}
-            <div className="absolute inset-0 bg-indigo-600/10 rounded-[2.5rem]" />
+            <div className="absolute inset-0 bg-indigo-600/10 rounded-[2.25rem]" />
           </div>
 
           <div className="space-y-1">
@@ -364,7 +378,7 @@ export const Podcast: React.FC = () => {
               <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">Now Streaming</p>
             </div>
             <h3 className="text-xl font-bold text-slate-900 dark:text-slate-100 leading-tight px-4 line-clamp-2">
-              {active ? `Episode: ${activeVideoId}` : 'Select a session'}
+              {getEpisodeTitle(active)}
             </h3>
             <p className="text-xs font-medium text-slate-400">{active ? formatPublishedAt(active.publishedAt) : 'VisionFlow Original'}</p>
           </div>
@@ -374,12 +388,12 @@ export const Podcast: React.FC = () => {
         <div className="flex items-center justify-center gap-8">
           <button
             onClick={toggle}
-            className="w-20 h-20 bg-indigo-600 text-white rounded-full flex items-center justify-center shadow-2xl shadow-indigo-200/50 dark:shadow-indigo-950/40 hover:bg-indigo-700 hover:scale-110 active:scale-95 transition-all disabled:opacity-60 disabled:cursor-not-allowed"
+            className="w-16 h-16 bg-indigo-600 text-white rounded-full flex items-center justify-center shadow-2xl shadow-indigo-200/50 dark:shadow-indigo-950/40 hover:bg-indigo-700 hover:scale-110 active:scale-95 transition-all disabled:opacity-60 disabled:cursor-not-allowed"
             disabled={!activeVideoId || playerState === 'loading'}
             aria-label={playerState === 'playing' ? 'Pause' : 'Play'}
             title={playerState === 'playing' ? 'Pause' : 'Play'}
           >
-            {playerState === 'playing' ? <Pause className="w-8 h-8" /> : <Play className="w-8 h-8 ml-1" />}
+            {playerState === 'playing' ? <Pause className="w-7 h-7" /> : <Play className="w-7 h-7 ml-1" />}
           </button>
         </div>
 
@@ -409,6 +423,7 @@ export const Podcast: React.FC = () => {
               const selected = l.id === activeId;
               const isPlayingThis = selected && playerState === 'playing';
               const id = extractYouTubeId(l.url);
+              const title = (l.title || '').trim();
 
               return (
                 <button
@@ -421,7 +436,7 @@ export const Podcast: React.FC = () => {
                       ? 'bg-white dark:bg-slate-900 border-indigo-100 dark:border-indigo-900/30 shadow-md ring-1 ring-indigo-50 dark:ring-indigo-950/30'
                       : 'bg-white/50 dark:bg-slate-900/40 border-slate-100 dark:border-slate-800 hover:bg-white dark:hover:bg-slate-900 hover:border-slate-200 dark:hover:border-slate-700'
                   }`}
-                  aria-label={`Select ${id || 'episode'}`}
+                  aria-label={`Select ${title || id || 'episode'}`}
                 >
                   <div
                     className={`p-3 rounded-2xl ${
@@ -432,7 +447,7 @@ export const Podcast: React.FC = () => {
                   </div>
                   <div className="text-left flex-1 min-w-0">
                     <p className={`font-bold text-sm truncate ${selected ? 'text-slate-900 dark:text-slate-100' : 'text-slate-600 dark:text-slate-200'}`}>
-                      {id || toYouTubeWatchUrl(l.url)}
+                      {title || id || toYouTubeWatchUrl(l.url)}
                     </p>
                     <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">
                       {formatPublishedAt(l.publishedAt)}
