@@ -229,7 +229,7 @@ export const Planner: React.FC<Props> = ({ uid, tasks, activities, setTasks, onA
             )}
           </div>
 
-          <div className="mt-3 text-sm text-slate-700 dark:text-slate-200 whitespace-pre-wrap">
+          <div className="mt-3 text-sm text-slate-700 dark:text-slate-200 whitespace-pre-wrap text-align-justify">
             {journalLoading ? (
               <span className="text-slate-400">Loading journal...</span>
             ) : journalText ? (
