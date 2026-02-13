@@ -65,7 +65,6 @@ export const Planner: React.FC<Props> = ({ tasks, activities, setTasks, onAddTas
       <div className="flex justify-between items-start">
         <div>
           <h2 className="text-3xl font-bold text-slate-900 dark:text-slate-100">Daily Planner</h2>
-          <p className="text-slate-500 dark:text-slate-400">One step at a time towards your vision.</p>
         </div>
         <div className="flex flex-col items-end gap-2">
            <input 
