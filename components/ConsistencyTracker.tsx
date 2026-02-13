@@ -1,5 +1,5 @@
 
-import React, { useMemo } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { Activity } from '../types';
 import { toLocalISODate } from '../src/date';
 
@@ -11,9 +11,17 @@ interface Props {
 
 export const ConsistencyTracker: React.FC<Props> = ({
   activities,
-  currentStreak,
-  longestStreak,
+  currentStreak: _currentStreak,
+  longestStreak: _longestStreak,
 }) => {
+  const [now, setNow] = useState(() => new Date());
+
+  // Keep the time bar fresh without being too noisy.
+  useEffect(() => {
+    const id = window.setInterval(() => setNow(new Date()), 30_000);
+    return () => window.clearInterval(id);
+  }, []);
+
   const { year, months } = useMemo(() => {
     const now = new Date();
     const year = now.getFullYear();
@@ -61,6 +69,71 @@ export const ConsistencyTracker: React.FC<Props> = ({
     const a = activities.find((x) => x.date === todayISO);
     return a && Number.isFinite(a.count) ? a.count : 0;
   }, [activities, todayISO]);
+
+  const timeWindow = useMemo(() => {
+    const start = new Date(now);
+    start.setHours(5, 30, 0, 0); // 5:30 AM
+    const end = new Date(now);
+    end.setHours(22, 0, 0, 0); // 10:00 PM
+
+    const totalMs = Math.max(1, end.getTime() - start.getTime());
+    const elapsedMs = now.getTime() - start.getTime();
+    const clampedProgress = Math.min(1, Math.max(0, elapsedMs / totalMs));
+
+    const remainingMs = Math.max(0, end.getTime() - now.getTime());
+
+    const fmtTime = new Intl.DateTimeFormat(undefined, {
+      hour: 'numeric',
+      minute: '2-digit',
+    });
+
+    const fmtDuration = (ms: number) => {
+      const totalMinutes = Math.max(0, Math.floor(ms / 60_000));
+      const h = Math.floor(totalMinutes / 60);
+      const m = totalMinutes % 60;
+      if (h <= 0) return `${m}m`;
+      if (m === 0) return `${h}h`;
+      return `${h}h ${m}m`;
+    };
+
+    let statusLabel = '';
+    if (now.getTime() < start.getTime()) {
+      statusLabel = `Starts in ${fmtDuration(start.getTime() - now.getTime())}`;
+    } else if (now.getTime() >= end.getTime()) {
+      statusLabel = 'Window finished';
+    } else {
+      statusLabel = `${fmtDuration(remainingMs)} remaining`;
+    }
+
+    return {
+      start,
+      end,
+      progress: clampedProgress,
+      statusLabel,
+      startLabel: fmtTime.format(start),
+      endLabel: fmtTime.format(end),
+      nowLabel: fmtTime.format(now),
+    };
+  }, [now]);
+
+  const progressColor = useMemo(() => {
+    // Interpolate green -> blue -> red based on progress
+    const lerp = (a: number, b: number, t: number) => a + (b - a) * t;
+    const toRgb = (r: number, g: number, b: number) => `rgb(${Math.round(r)}, ${Math.round(g)}, ${Math.round(b)})`;
+
+    const p = timeWindow.progress;
+    const green = { r: 34, g: 197, b: 94 };
+    const blue = { r: 59, g: 130, b: 246 };
+    const red = { r: 239, g: 68, b: 68 };
+
+    if (p <= 0.5) {
+      const t = p / 0.5;
+      return toRgb(lerp(green.r, blue.r, t), lerp(green.g, blue.g, t), lerp(green.b, blue.b, t));
+    }
+
+    const t = (p - 0.5) / 0.5;
+    return toRgb(lerp(blue.r, red.r, t), lerp(blue.g, red.g, t), lerp(blue.b, red.b, t));
+  }, [timeWindow.progress]);
 
   const getColor = (count: number, inMonth: boolean) => {
     if (!inMonth) return 'bg-transparent';
@@ -149,26 +222,36 @@ export const ConsistencyTracker: React.FC<Props> = ({
         {/* Stats */}
         <div className="space-y-6">
           <div className="bg-white dark:bg-slate-900 p-6 rounded-3xl shadow-sm border border-slate-100 dark:border-slate-800">
-            <p className="text-sm font-bold text-slate-400 uppercase mb-1">Today's Activities</p>
-            <p className="text-4xl font-black text-slate-900 dark:text-slate-100">
-              {todayCount}
-            </p>
-          </div>
-          <div className="bg-white dark:bg-slate-900 p-6 rounded-3xl shadow-sm border border-slate-100 dark:border-slate-800">
-            <p className="text-sm font-bold text-slate-400 uppercase mb-1">Active Days</p>
-            <p className="text-4xl font-black text-indigo-600">{activities.length}</p>
-          </div>
-          <div className="bg-white dark:bg-slate-900 p-6 rounded-3xl shadow-sm border border-slate-100 dark:border-slate-800">
-            <p className="text-sm font-bold text-slate-400 uppercase mb-1">Current Streak</p>
-            <p className="text-4xl font-black text-slate-900 dark:text-slate-100">
-              {typeof currentStreak === 'number' ? `${currentStreak} Days` : '—'}
-            </p>
-          </div>
-          <div className="bg-white dark:bg-slate-900 p-6 rounded-3xl shadow-sm border border-slate-100 dark:border-slate-800">
-            <p className="text-sm font-bold text-slate-400 uppercase mb-1">Longest Streak</p>
-            <p className="text-4xl font-black text-indigo-600">
-              {typeof longestStreak === 'number' ? `${longestStreak} Days` : '—'}
-            </p>
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <p className="text-sm font-bold text-slate-400 uppercase mb-1">Evening Progress</p>
+                <p className="text-lg font-black text-slate-900 dark:text-slate-100">
+                  {timeWindow.startLabel} – {timeWindow.endLabel}
+                </p>
+              </div>
+              <div className="text-right">
+                <p className="text-[11px] font-bold text-slate-400 uppercase">Now</p>
+                <p className="text-sm font-black text-slate-900 dark:text-slate-100">{timeWindow.nowLabel}</p>
+              </div>
+            </div>
+
+            <div className="mt-4">
+              <div className="h-3 w-full rounded-full bg-slate-100 dark:bg-slate-800 overflow-hidden">
+                <div
+                  className="h-full rounded-full transition-[width] duration-700"
+                  style={{
+                    width: `${Math.round(timeWindow.progress * 100)}%`,
+                    backgroundColor: progressColor,
+                  }}
+                />
+              </div>
+
+              <div className="mt-3 flex items-center justify-between text-xs font-semibold text-slate-500 dark:text-slate-400">
+                <span>{timeWindow.startLabel}</span>
+                <span className="text-slate-700 dark:text-slate-200">{timeWindow.statusLabel}</span>
+                <span>{timeWindow.endLabel}</span>
+              </div>
+            </div>
           </div>
         </div>
       </div>
