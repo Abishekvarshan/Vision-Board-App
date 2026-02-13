@@ -105,6 +105,7 @@ const AuthedApp: React.FC<{ user: User }> = ({ user }) => {
         )}
         {activeTab === 'planner' && (
           <Planner
+            uid={user.uid}
             tasks={tasks}
             activities={activities}
             setTasks={(newTasks) => {
