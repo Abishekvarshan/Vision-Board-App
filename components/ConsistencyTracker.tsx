@@ -142,7 +142,6 @@ export const ConsistencyTracker: React.FC<Props> = ({
     <div className="space-y-8 animate-in fade-in duration-500">
       <div className="mb-12">
         <h2 className="text-3xl font-bold text-slate-900 dark:text-slate-100">Consistency Tracker</h2>
-        <p className="text-slate-500 dark:text-slate-400">Visualization of your discipline and progress over the past year.</p>
       </div>
 
       {/* Layout: month calendars scroll horizontally; stats stay visible without long vertical scrolling */}
@@ -152,7 +151,6 @@ export const ConsistencyTracker: React.FC<Props> = ({
           <div className="flex items-center justify-between gap-4 mb-6">
             <div>
               <div className="text-sm font-bold text-slate-900 dark:text-slate-100">{year}</div>
-              <div className="text-xs text-slate-500 dark:text-slate-400">Monthly calendars (28/30/31 days)</div>
             </div>
             <div className="hidden sm:flex items-center gap-2 text-xs text-slate-400 font-medium">
               <span>Less</span>

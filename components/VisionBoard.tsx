@@ -90,8 +90,7 @@ export const VisionBoard: React.FC<Props> = ({ items, onAddItem, onDeleteItem })
       <div className="flex flex-col sm:flex-row sm:justify-between sm:items-end gap-4">
         <div>
           <h2 className="text-3xl font-bold text-slate-900 dark:text-slate-100 tracking-tight">Vision Board</h2>
-          <p className="text-slate-500 dark:text-slate-400">Visualize your journey to the person you want to become.</p>
-        </div>
+                  </div>
       </div>
 
       {/* Floating action button (bottom-left) */}
