@@ -1,26 +1,138 @@
 
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Activity } from '../types';
 import { toLocalISODate } from '../src/date';
+import {
+  ensureWeeklyResetLocal,
+  FreedomStreakDoc,
+  getFreedomMode,
+  getFreedomStreak,
+  markBrokeIt,
+  markCleanToday,
+} from '../src/freedomStreak';
 
 interface Props {
   activities: Activity[];
   currentStreak?: number;
   longestStreak?: number;
+  uid?: string;
 }
 
 export const ConsistencyTracker: React.FC<Props> = ({
   activities,
   currentStreak: _currentStreak,
   longestStreak: _longestStreak,
+  uid,
 }) => {
   const [now, setNow] = useState(() => new Date());
+
+  // Freedom Streak state
+  const [freedom, setFreedom] = useState<FreedomStreakDoc | null>(null);
+  const [freedomLoading, setFreedomLoading] = useState(false);
+  const [encourage, setEncourage] = useState<string | null>(null);
+  const [celebrate, setCelebrate] = useState(false);
+  const [reward, setReward] = useState<{ title: string; body: string } | null>(null);
+
+  const rewards = useMemo(
+    () => [
+      'Buy yourself an ice cream',
+      'Enjoy your favorite coffee or milkshake',
+      'Eat one small chocolate or dessert',
+      'Watch one movie or one episode guilt-free',
+      'Eat your favorite snack once – OK: Lava Cake',
+      'Play games for 30–45 minutes',
+      'Buy one small affordable item under your budget limit',
+      'Go for a relaxing evening walk with music',
+      'Spend 1 hour doing your favorite hobby such as reading or sketching',
+      'Take a no-work relaxation evening just for yourself',
+    ],
+    []
+  );
+
+  const pickReward = useCallback(() => {
+    const idx = Math.floor(Math.random() * rewards.length);
+    const r = rewards[idx] ?? rewards[0];
+    return {
+      title: 'Milestone reward (optional)',
+      body: r!,
+    };
+  }, [rewards]);
+
+  useEffect(() => {
+    if (!uid) return;
+    setFreedomLoading(true);
+    getFreedomStreak(uid)
+      .then((d) => setFreedom(ensureWeeklyResetLocal(d)))
+      .catch((e) => console.error('Failed to load freedom streak', e))
+      .finally(() => setFreedomLoading(false));
+  }, [uid]);
+
+  // Tiny celebration auto-hide
+  useEffect(() => {
+    if (!celebrate) return;
+    const id = window.setTimeout(() => setCelebrate(false), 1600);
+    return () => window.clearTimeout(id);
+  }, [celebrate]);
 
   // Keep the time bar fresh without being too noisy.
   useEffect(() => {
     const id = window.setInterval(() => setNow(new Date()), 30_000);
     return () => window.clearInterval(id);
   }, []);
+
+  const freedomMode = freedom ? getFreedomMode(freedom) : 'progressive';
+
+  const freedomTargetLabel = useMemo(() => {
+    if (!freedom) return '—';
+    if (freedomMode === 'weekly') return 'Weekly Control Mode';
+    return `${freedom.target_days} Days`;
+  }, [freedom, freedomMode]);
+
+  const freedomProgress = useMemo(() => {
+    if (!freedom) return { label: '0/0', pct: 0 };
+    if (freedomMode === 'weekly') {
+      const used = freedom.weekly_usage_count ?? 0;
+      return { label: `Used: ${used}/1 this week`, pct: Math.min(1, used / 1) };
+    }
+    const cur = freedom.current_streak ?? 0;
+    const tgt = freedom.target_days;
+    return { label: `${cur}/${tgt} Days`, pct: tgt <= 0 ? 0 : Math.min(1, cur / tgt) };
+  }, [freedom, freedomMode]);
+
+  const onCleanToday = async () => {
+    if (!uid) return;
+    setEncourage(null);
+    setFreedomLoading(true);
+    try {
+      const res = await markCleanToday(uid);
+      setFreedom(ensureWeeklyResetLocal(res.updated));
+      if (res.levelCompleted) {
+        setCelebrate(true);
+        // show reward popups only for milestone targets (2/3/5/7), not when entering weekly
+        if (!res.enteredWeeklyMode) setReward(pickReward());
+      }
+    } catch (e) {
+      console.error('markCleanToday failed', e);
+    } finally {
+      setFreedomLoading(false);
+    }
+  };
+
+  const onBrokeIt = async () => {
+    if (!uid) return;
+    setFreedomLoading(true);
+    try {
+      const updated = await markBrokeIt(uid);
+      setFreedom(ensureWeeklyResetLocal(updated));
+      setEncourage(
+        "That’s okay. This doesn’t erase your progress — it’s just one moment. Take a breath, reset, and we’ll go again today."
+      );
+    } catch (e) {
+      console.error('markBrokeIt failed', e);
+    } finally {
+      setFreedomLoading(false);
+    }
+  };
 
   const { year, months } = useMemo(() => {
     const now = new Date();
@@ -132,17 +244,110 @@ export const ConsistencyTracker: React.FC<Props> = ({
   const getColor = (count: number, inMonth: boolean) => {
     if (!inMonth) return 'bg-transparent';
     if (count === 0) return 'bg-slate-100 dark:bg-slate-800';
-    if (count <= 1) return 'bg-indigo-200';
-    if (count <= 3) return 'bg-indigo-400';
-    if (count <= 5) return 'bg-indigo-600';
-    return 'bg-indigo-900';
+    // Inverted intensity:
+    // - more activity => brighter
+    // - less activity => darker
+    if (count <= 1) return 'bg-emerald-900';
+    if (count <= 3) return 'bg-emerald-700';
+    if (count <= 5) return 'bg-emerald-500';
+    return 'bg-emerald-200';
   };
 
   return (
     <div className="space-y-8 animate-in fade-in duration-500">
       <div className="mb-12">
-        <h2 className="text-3xl font-bold text-slate-900 dark:text-slate-100">Consistency Tracker</h2>
+        <h2 className="text-3xl font-bold text-slate-900 dark:text-slate-100">Growth</h2>
+        <p className="mt-2 text-slate-500 dark:text-slate-400 max-w-2xl">
+          Small wins compound. Track your consistency and build disciplined, supportive habits.
+        </p>
       </div>
+
+      {/* Freedom Streak */}
+      <div className="bg-white dark:bg-slate-900 p-6 rounded-3xl shadow-sm border border-slate-100 dark:border-slate-800">
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <div className="text-xs font-bold uppercase tracking-wider text-slate-400">Freedom Streak</div>
+            <div className="mt-2 text-xl font-black text-slate-900 dark:text-slate-100 flex items-center gap-2">
+              <span>{freedomTargetLabel}</span>
+              {celebrate && (
+                <span className="inline-flex items-center rounded-full bg-emerald-100 text-emerald-800 px-3 py-1 text-xs font-black animate-in zoom-in duration-300">
+                  Unlocked!
+                </span>
+              )}
+            </div>
+            <div className="mt-1 text-sm font-semibold text-slate-500 dark:text-slate-400">
+              {freedom ? freedomProgress.label : uid ? 'Loading…' : 'Sign in to start'}
+            </div>
+          </div>
+
+          <div className="text-right">
+            <div className="text-xs font-bold uppercase tracking-wider text-slate-400">Status</div>
+            <div className="mt-2 text-sm font-black text-slate-900 dark:text-slate-100">
+              {freedomLoading ? 'Saving…' : freedomMode === 'weekly' ? 'Controlled' : 'Building'}
+            </div>
+          </div>
+        </div>
+
+        <div className="mt-5">
+          <div className="h-3 w-full rounded-full bg-slate-100 dark:bg-slate-800 overflow-hidden">
+            <div
+              className="h-full rounded-full transition-[width] duration-700 bg-indigo-600"
+              style={{ width: `${Math.round(freedomProgress.pct * 100)}%` }}
+            />
+          </div>
+        </div>
+
+        {encourage && (
+          <div className="mt-4 text-sm font-semibold text-slate-700 dark:text-slate-200 bg-slate-50 dark:bg-slate-950/40 border border-slate-100 dark:border-slate-800 rounded-2xl px-4 py-3">
+            {encourage}
+          </div>
+        )}
+
+        <div className="mt-5 grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <button
+            onClick={onCleanToday}
+            disabled={!uid || freedomLoading}
+            className="w-full px-4 py-3 rounded-2xl bg-indigo-600 text-white font-extrabold hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed transition"
+          >
+            I Stayed Clean Today
+          </button>
+          <button
+            onClick={onBrokeIt}
+            disabled={!uid || freedomLoading}
+            className="w-full px-4 py-3 rounded-2xl bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-slate-100 font-extrabold hover:bg-slate-200 dark:hover:bg-slate-700 disabled:opacity-50 disabled:cursor-not-allowed transition"
+          >
+            I Broke It
+          </button>
+        </div>
+      </div>
+
+      {/* Reward Popup */}
+      {reward && (
+        <div className="fixed inset-0 z-[70] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="w-full max-w-md rounded-[2.5rem] bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-2xl p-8 animate-in zoom-in duration-200">
+            <div className="text-xs font-bold uppercase tracking-wider text-slate-400">{reward.title}</div>
+            <div className="mt-2 text-xl font-black text-slate-900 dark:text-slate-100">You earned it.</div>
+            <div className="mt-3 text-sm font-semibold text-slate-600 dark:text-slate-300 leading-relaxed">
+              {reward.body}
+            </div>
+
+            <div className="mt-6 grid grid-cols-2 gap-3">
+              <button
+                onClick={() => setReward(null)}
+                className="px-4 py-3 rounded-2xl bg-indigo-600 text-white font-extrabold hover:bg-indigo-700 transition"
+              >
+                Accept Reward
+              </button>
+              <button
+                onClick={() => setReward(null)}
+                className="px-4 py-3 rounded-2xl bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-slate-100 font-extrabold hover:bg-slate-200 dark:hover:bg-slate-700 transition"
+              >
+                Skip
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Layout: month calendars scroll horizontally; stats stay visible without long vertical scrolling */}
       <div className="grid grid-cols-1 lg:grid-cols-[1fr_360px] gap-6">
@@ -155,10 +360,10 @@ export const ConsistencyTracker: React.FC<Props> = ({
             <div className="hidden sm:flex items-center gap-2 text-xs text-slate-400 font-medium">
               <span>Less</span>
               <div className="w-3 h-3 rounded-[2px] bg-slate-100 dark:bg-slate-800" />
-              <div className="w-3 h-3 rounded-[2px] bg-indigo-200" />
-              <div className="w-3 h-3 rounded-[2px] bg-indigo-400" />
-              <div className="w-3 h-3 rounded-[2px] bg-indigo-600" />
-              <div className="w-3 h-3 rounded-[2px] bg-indigo-900" />
+              <div className="w-3 h-3 rounded-[2px] bg-emerald-900" />
+              <div className="w-3 h-3 rounded-[2px] bg-emerald-700" />
+              <div className="w-3 h-3 rounded-[2px] bg-emerald-500" />
+              <div className="w-3 h-3 rounded-[2px] bg-emerald-200" />
               <span>More</span>
             </div>
           </div>
@@ -203,10 +408,10 @@ export const ConsistencyTracker: React.FC<Props> = ({
           <div className="sm:hidden mt-6 flex items-center justify-end gap-2 text-xs text-slate-400 font-medium">
             <span>Less</span>
             <div className="w-3 h-3 rounded-[2px] bg-slate-100 dark:bg-slate-800" />
-            <div className="w-3 h-3 rounded-[2px] bg-indigo-200" />
-            <div className="w-3 h-3 rounded-[2px] bg-indigo-400" />
-            <div className="w-3 h-3 rounded-[2px] bg-indigo-600" />
-            <div className="w-3 h-3 rounded-[2px] bg-indigo-900" />
+            <div className="w-3 h-3 rounded-[2px] bg-emerald-900" />
+            <div className="w-3 h-3 rounded-[2px] bg-emerald-700" />
+            <div className="w-3 h-3 rounded-[2px] bg-emerald-500" />
+            <div className="w-3 h-3 rounded-[2px] bg-emerald-200" />
             <span>More</span>
           </div>
         </div>

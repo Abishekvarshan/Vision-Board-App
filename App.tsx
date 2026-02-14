@@ -122,6 +122,7 @@ const AuthedApp: React.FC<{ user: User }> = ({ user }) => {
             activities={activities}
             currentStreak={streak?.currentStreak}
             longestStreak={streak?.longestStreak}
+            uid={user.uid}
           />
         )}
       </main>

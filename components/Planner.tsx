@@ -44,16 +44,20 @@ export const Planner: React.FC<Props> = ({ uid, tasks, activities, setTasks, onA
       date: filterDate
     };
 
-    // Count an activity only when user adds a new task.
-    onAddTaskActivity?.(filterDate);
-
     setTasks([...tasks, newTask]);
     setNewTaskText('');
   };
 
   const toggleTask = (id: string) => {
-    // Do NOT count an activity when checking/unchecking tasks.
-    setTasks(tasks.map(t => t.id === id ? { ...t, completed: !t.completed } : t));
+    // Count an activity ONLY when a task is marked completed.
+    // (If user unchecks, do not decrement; keep the calendar as “you did something that day”.)
+    const target = tasks.find((t) => t.id === id);
+    if (!target) return;
+
+    const nextCompleted = !target.completed;
+    if (nextCompleted) onAddTaskActivity?.(target.date);
+
+    setTasks(tasks.map(t => t.id === id ? { ...t, completed: nextCompleted } : t));
   };
 
   const deleteTask = (id: string) => {
