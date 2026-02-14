@@ -153,7 +153,7 @@ export const AuthGate: React.FC<Props> = ({ children }) => {
 
   return (
     <>
-      <div className="bg-white dark:bg-slate-950 border-b border-slate-200 dark:border-slate-800">
+      <div className="sticky top-0 z-[55] bg-white dark:bg-slate-950 border-b border-slate-200 dark:border-slate-800">
         <div className="max-w-6xl mx-auto px-4 py-3 flex items-center justify-between">
           <div className="text-sm font-bold text-indigo-600 flex items-center gap-2">
             <Layout className="w-5 h-5" /> VisionFlow
@@ -169,7 +169,7 @@ export const AuthGate: React.FC<Props> = ({ children }) => {
             </button>
 
             {menuOpen && (
-              <div className="absolute right-0 mt-2 w-64 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-lg overflow-hidden">
+              <div className="absolute right-0 z-[56] mt-2 w-64 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-lg overflow-hidden">
                 <div className="p-3 border-b border-slate-200 dark:border-slate-800">
                   <div className="flex items-center gap-2">
                     <div className="w-8 h-8 rounded-full bg-indigo-100 dark:bg-indigo-900/40 flex items-center justify-center">
