@@ -81,6 +81,20 @@ export const ConsistencyTracker: React.FC<Props> = ({
   }, []);
 
   const freedomMode = freedom ? getFreedomMode(freedom) : 'progressive';
+  const todayISO = useMemo(() => toLocalISODate(new Date()), [now]);
+
+  const canShowCleanToday = useMemo(() => {
+    if (!uid) return false;
+    if (!freedom) return true;
+
+    // If the user broke today, hide the Clean button until the next day.
+    if (freedom.last_action_date === todayISO && freedom.last_action_kind === 'broke') return false;
+
+    // If already marked clean today, also hide (already counted).
+    if (freedom.last_action_date === todayISO && freedom.last_action_kind === 'clean') return false;
+
+    return true;
+  }, [freedom, todayISO, uid]);
 
   const freedomTargetLabel = useMemo(() => {
     if (!freedom) return '—';
@@ -98,6 +112,31 @@ export const ConsistencyTracker: React.FC<Props> = ({
     const tgt = freedom.target_days;
     return { label: `${cur}/${tgt} Days`, pct: tgt <= 0 ? 0 : Math.min(1, cur / tgt) };
   }, [freedom, freedomMode]);
+
+  const weeklyRecap = useMemo(() => {
+    if (!freedom) {
+      return { cleanDays: 0, brokeDays: 0, totalDays: 0, weekStart: null as string | null };
+    }
+    const actions = freedom.weekly_actions ?? {};
+    let cleanDays = 0;
+    let brokeDays = 0;
+    for (const k of Object.keys(actions)) {
+      if (actions[k] === 'clean') cleanDays++;
+      else if (actions[k] === 'broke') brokeDays++;
+    }
+    const totalDays = cleanDays + brokeDays;
+    return {
+      cleanDays,
+      brokeDays,
+      totalDays,
+      weekStart: freedom.weekly_recap_week_start ?? null,
+    };
+  }, [freedom]);
+
+  const isSunday = useMemo(() => {
+    // local Sunday
+    return now.getDay() === 0;
+  }, [now]);
 
   const onCleanToday = async () => {
     if (!uid) return;
@@ -125,7 +164,7 @@ export const ConsistencyTracker: React.FC<Props> = ({
       const updated = await markBrokeIt(uid);
       setFreedom(ensureWeeklyResetLocal(updated));
       setEncourage(
-        "That’s okay. This doesn’t erase your progress — it’s just one moment. Take a breath, reset, and we’ll go again today."
+        "That’s okay. Take a breath, reset, and we’ll go again today."
       );
     } catch (e) {
       console.error('markBrokeIt failed', e);
@@ -257,9 +296,6 @@ export const ConsistencyTracker: React.FC<Props> = ({
     <div className="space-y-8 animate-in fade-in duration-500">
       <div className="mb-12">
         <h2 className="text-3xl font-bold text-slate-900 dark:text-slate-100">Growth</h2>
-        <p className="mt-2 text-slate-500 dark:text-slate-400 max-w-2xl">
-          Small wins compound. Track your consistency and build disciplined, supportive habits.
-        </p>
       </div>
 
       {/* Freedom Streak */}
@@ -304,22 +340,64 @@ export const ConsistencyTracker: React.FC<Props> = ({
         )}
 
         <div className="mt-5 grid grid-cols-1 sm:grid-cols-2 gap-3">
-          <button
-            onClick={onCleanToday}
-            disabled={!uid || freedomLoading}
-            className="w-full px-4 py-3 rounded-2xl bg-indigo-600 text-white font-extrabold hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed transition"
-          >
-            I Stayed Clean Today
-          </button>
+          {canShowCleanToday && (
+            <button
+              onClick={onCleanToday}
+              disabled={!uid || freedomLoading}
+              className="w-full px-4 py-3 rounded-2xl bg-indigo-600 text-white font-extrabold hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed transition"
+            >
+              I Stayed Clean Today
+            </button>
+          )}
           <button
             onClick={onBrokeIt}
             disabled={!uid || freedomLoading}
-            className="w-full px-4 py-3 rounded-2xl bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-slate-100 font-extrabold hover:bg-slate-200 dark:hover:bg-slate-700 disabled:opacity-50 disabled:cursor-not-allowed transition"
+            className={`w-full px-4 py-3 rounded-2xl bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-slate-100 font-extrabold hover:bg-slate-200 dark:hover:bg-slate-700 disabled:opacity-50 disabled:cursor-not-allowed transition ${
+              canShowCleanToday ? '' : 'sm:col-span-2'
+            }`}
           >
             I Broke It
           </button>
         </div>
       </div>
+
+      {/* Weekly Recap (Sundays only) */}
+      {isSunday && (
+        <div className="bg-white dark:bg-slate-900 p-6 rounded-3xl shadow-sm border border-slate-100 dark:border-slate-800">
+          <div className="flex items-start justify-between gap-4">
+            <div>
+              <div className="text-xs font-bold uppercase tracking-wider text-slate-400">Weekly Recap</div>
+              <div className="mt-2 text-xl font-black text-slate-900 dark:text-slate-100">
+                {weeklyRecap.weekStart ? `Week of ${weeklyRecap.weekStart}` : 'This week'}
+              </div>
+              <div className="mt-1 text-sm font-semibold text-slate-500 dark:text-slate-400">
+                Clean days: <span className="text-emerald-600 dark:text-emerald-400 font-black">{weeklyRecap.cleanDays}</span>
+                {'  '}•{'  '}
+                Break days: <span className="text-rose-600 dark:text-rose-400 font-black">{weeklyRecap.brokeDays}</span>
+              </div>
+            </div>
+
+            <div className="text-right">
+              <div className="text-xs font-bold uppercase tracking-wider text-slate-400">Total</div>
+              <div className="mt-2 text-sm font-black text-slate-900 dark:text-slate-100">
+                {weeklyRecap.totalDays}/7 days logged
+              </div>
+            </div>
+          </div>
+
+          <div className="mt-5">
+            <div className="h-3 w-full rounded-full bg-slate-100 dark:bg-slate-800 overflow-hidden">
+              <div
+                className="h-full rounded-full transition-[width] duration-700 bg-emerald-500"
+                style={{ width: `${Math.round((weeklyRecap.cleanDays / 7) * 100)}%` }}
+              />
+            </div>
+            <div className="mt-3 text-xs font-semibold text-slate-500 dark:text-slate-400">
+              Weekly reset tomorrow. Celebrate progress, then recommit.
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Reward Popup */}
       {reward && (
