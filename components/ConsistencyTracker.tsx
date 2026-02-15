@@ -556,9 +556,9 @@ export const ConsistencyTracker: React.FC<Props> = ({
               </div>
 
               {/* Visual Stats Cards */}
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 {/* Clean Days Card */}
-                <div className="bg-white dark:bg-slate-800 rounded-2xl p-4 border border-slate-200 dark:border-slate-700">
+                <div className="w-full bg-white dark:bg-slate-800 rounded-2xl p-4 border border-slate-200 dark:border-slate-700">
                   <div className="flex items-center gap-2 mb-2">
                     <span className="text-xs uppercase tracking-wider text-emerald-700 dark:text-emerald-400 font-bold">
                       Clean Days
@@ -576,7 +576,7 @@ export const ConsistencyTracker: React.FC<Props> = ({
                 </div>
 
                 {/* Break Days Card */}
-                <div className="bg-white dark:bg-slate-800 rounded-2xl p-4 border border-slate-200 dark:border-slate-700">
+                <div className="w-full bg-white dark:bg-slate-800 rounded-2xl p-4 border border-slate-200 dark:border-slate-700">
                   <div className="flex items-center gap-2 mb-2">
                     <span className="text-xs uppercase tracking-wider text-orange-700 dark:text-orange-400 font-bold">
                       Break Days
