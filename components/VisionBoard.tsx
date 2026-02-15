@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { Plus, Trash2, Image as ImageIcon, X, Loader2, UploadCloud } from 'lucide-react';
 import { VisionItem, CATEGORIES, Category } from '../types';
 
@@ -19,6 +19,21 @@ export const VisionBoard: React.FC<Props> = ({ items, onAddItem, onDeleteItem })
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [category, setCategory] = useState<Category>('Personal');
   const [isUploading, setIsUploading] = useState(false);
+  const [selectedCategoryFilter, setSelectedCategoryFilter] = useState<string>('All');
+
+  const categoryOptions = useMemo(() => {
+    // Merge the canonical categories with any categories found in saved items,
+    // so older/newer data still appears in the filter dropdown.
+    const fromItems = Array.from(
+      new Set(items.map((i) => i.category).filter((c): c is string => Boolean(c)))
+    );
+    return Array.from(new Set([...CATEGORIES, ...fromItems]));
+  }, [items]);
+
+  const visibleItems = useMemo(() => {
+    if (selectedCategoryFilter === 'All') return items;
+    return items.filter((i) => i.category === selectedCategoryFilter);
+  }, [items, selectedCategoryFilter]);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -91,6 +106,29 @@ export const VisionBoard: React.FC<Props> = ({ items, onAddItem, onDeleteItem })
         <div>
           <h2 className="text-3xl font-bold text-slate-900 dark:text-slate-100 tracking-tight">Vision Board</h2>
                   </div>
+
+        {/* Category Filter */}
+        <div className="flex items-center gap-3">
+          <label
+            htmlFor="vision-category-filter"
+            className="text-xs font-black text-slate-400 uppercase tracking-widest"
+          >
+            Category
+          </label>
+          <select
+            id="vision-category-filter"
+            value={selectedCategoryFilter}
+            onChange={(e) => setSelectedCategoryFilter(e.target.value)}
+            className="h-10 rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 px-4 text-sm font-semibold text-slate-700 dark:text-slate-200 shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/30"
+          >
+            <option value="All">All</option>
+            {categoryOptions.map((cat) => (
+              <option key={cat} value={cat}>
+                {cat}
+              </option>
+            ))}
+          </select>
+        </div>
       </div>
 
       {/* Floating action button (bottom-left) */}
@@ -113,8 +151,18 @@ export const VisionBoard: React.FC<Props> = ({ items, onAddItem, onDeleteItem })
             <p className="text-lg font-medium text-slate-600 dark:text-slate-200">Your future starts here.</p>
             <p className="text-sm text-slate-500 dark:text-slate-400">Click the button to add your first goal.</p>
           </div>
+        ) : visibleItems.length === 0 ? (
+          <div className="col-span-full py-32 border-2 border-dashed border-slate-200 dark:border-slate-800 rounded-[2.5rem] flex flex-col items-center justify-center text-slate-400 bg-white/50 dark:bg-slate-900/30">
+            <div className="p-5 bg-slate-100 dark:bg-slate-800 rounded-full mb-4">
+              <ImageIcon className="w-12 h-12 opacity-30" />
+            </div>
+            <p className="text-lg font-medium text-slate-600 dark:text-slate-200">
+              No images in “{selectedCategoryFilter}”.
+            </p>
+            <p className="text-sm text-slate-500 dark:text-slate-400">Try selecting another category.</p>
+          </div>
         ) : (
-          items.map(item => (
+          visibleItems.map(item => (
             <div key={item.id} className="mb-4 break-inside-avoid">
               <div className="group relative bg-white dark:bg-slate-900 rounded-[1.75rem] overflow-hidden shadow-sm hover:shadow-2xl transition-all duration-500 border border-slate-100 dark:border-slate-800">
                 <img
