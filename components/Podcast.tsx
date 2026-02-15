@@ -326,7 +326,7 @@ export const Podcast: React.FC = () => {
   };
 
   return (
-    <div className="max-w-xl mx-auto space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
+    <div className="max-w-md mx-auto space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-700">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
           <div className="p-2 bg-indigo-100 dark:bg-indigo-950/40 rounded-xl text-indigo-600 dark:text-indigo-300">
@@ -357,19 +357,19 @@ export const Podcast: React.FC = () => {
       </div>
 
       {/* Modern Player UI */}
-      <div className="bg-white dark:bg-slate-900 rounded-[2.5rem] shadow-xl border border-slate-100 dark:border-slate-800 p-6 space-y-6 relative overflow-hidden">
-        <div className="flex flex-col items-center text-center space-y-4">
-          <div className="w-40 h-40 bg-slate-100 dark:bg-slate-800 rounded-[2.25rem] flex items-center justify-center shadow-inner relative group overflow-hidden">
+      <div className="bg-white dark:bg-slate-900 rounded-[2rem] shadow-xl border border-slate-100 dark:border-slate-800 p-4 space-y-4 relative overflow-hidden">
+        <div className="flex flex-col items-center text-center space-y-3">
+          <div className="w-28 h-28 bg-slate-100 dark:bg-slate-800 rounded-[1.75rem] flex items-center justify-center shadow-inner relative group overflow-hidden">
             {activeVideoId ? (
               <img
                 src={`https://img.youtube.com/vi/${activeVideoId}/mqdefault.jpg`}
-                className="w-full h-full object-cover rounded-[2.25rem] opacity-85 group-hover:scale-110 transition-transform duration-700"
+                className="w-full h-full object-cover rounded-[1.75rem] opacity-85 group-hover:scale-110 transition-transform duration-700"
                 alt="Thumbnail"
               />
             ) : (
               <Music className="w-12 h-12 text-slate-300 dark:text-slate-600" />
             )}
-            <div className="absolute inset-0 bg-indigo-600/10 rounded-[2.25rem]" />
+            <div className="absolute inset-0 bg-indigo-600/10 rounded-[1.75rem]" />
           </div>
 
           <div className="space-y-1">
@@ -377,7 +377,7 @@ export const Podcast: React.FC = () => {
               <span className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse" />
               <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">Now Streaming</p>
             </div>
-            <h3 className="text-xl font-bold text-slate-900 dark:text-slate-100 leading-tight px-4 line-clamp-2">
+            <h3 className="text-lg font-bold text-slate-900 dark:text-slate-100 leading-tight px-2 line-clamp-2">
               {getEpisodeTitle(active)}
             </h3>
             <p className="text-xs font-medium text-slate-400">{active ? formatPublishedAt(active.publishedAt) : 'VisionFlow Original'}</p>
@@ -385,20 +385,20 @@ export const Podcast: React.FC = () => {
         </div>
 
         {/* Minimal Controls */}
-        <div className="flex items-center justify-center gap-8">
+        <div className="flex items-center justify-center gap-6">
           <button
             onClick={toggle}
-            className="w-16 h-16 bg-indigo-600 text-white rounded-full flex items-center justify-center shadow-2xl shadow-indigo-200/50 dark:shadow-indigo-950/40 hover:bg-indigo-700 hover:scale-110 active:scale-95 transition-all disabled:opacity-60 disabled:cursor-not-allowed"
+            className="w-12 h-12 bg-indigo-600 text-white rounded-full flex items-center justify-center shadow-2xl shadow-indigo-200/50 dark:shadow-indigo-950/40 hover:bg-indigo-700 hover:scale-110 active:scale-95 transition-all disabled:opacity-60 disabled:cursor-not-allowed"
             disabled={!activeVideoId || playerState === 'loading'}
             aria-label={playerState === 'playing' ? 'Pause' : 'Play'}
             title={playerState === 'playing' ? 'Pause' : 'Play'}
           >
-            {playerState === 'playing' ? <Pause className="w-7 h-7" /> : <Play className="w-7 h-7 ml-1" />}
+            {playerState === 'playing' ? <Pause className="w-6 h-6" /> : <Play className="w-6 h-6 ml-0.5" />}
           </button>
         </div>
 
         {/* Visualizer at Bottom */}
-        <div className="pt-4">
+        <div className="pt-2">
           <VoiceVisualizer isPlaying={playerState === 'playing'} />
         </div>
 
@@ -418,52 +418,60 @@ export const Podcast: React.FC = () => {
         ) : links.length === 0 ? (
           <div className="px-2 text-slate-500 dark:text-slate-400">No links found.</div>
         ) : (
-          <div className="space-y-3">
-            {links.map((l) => {
-              const selected = l.id === activeId;
-              const isPlayingThis = selected && playerState === 'playing';
-              const id = extractYouTubeId(l.url);
-              const title = (l.title || '').trim();
+          <div className="rounded-3xl border border-slate-100 dark:border-slate-800 bg-white/40 dark:bg-slate-900/30 p-2">
+            <div className="max-h-[45vh] overflow-y-auto pr-1">
+              <div className="space-y-3 pb-1">
+                {links.map((l) => {
+                  const selected = l.id === activeId;
+                  const isPlayingThis = selected && playerState === 'playing';
+                  const id = extractYouTubeId(l.url);
+                  const title = (l.title || '').trim();
 
-              return (
-                <button
-                  key={l.id}
-                  onClick={() => {
-                    setActiveId(l.id);
-                  }}
-                  className={`w-full flex items-center gap-4 p-4 rounded-3xl transition-all border ${
-                    selected
-                      ? 'bg-white dark:bg-slate-900 border-indigo-100 dark:border-indigo-900/30 shadow-md ring-1 ring-indigo-50 dark:ring-indigo-950/30'
-                      : 'bg-white/50 dark:bg-slate-900/40 border-slate-100 dark:border-slate-800 hover:bg-white dark:hover:bg-slate-900 hover:border-slate-200 dark:hover:border-slate-700'
-                  }`}
-                  aria-label={`Select ${title || id || 'episode'}`}
-                >
-                  <div
-                    className={`p-3 rounded-2xl ${
-                      selected ? 'bg-indigo-600 text-white' : 'bg-slate-100 dark:bg-slate-800 text-slate-400 dark:text-slate-300'
-                    }`}
-                  >
-                    <Volume2 className="w-4 h-4" />
-                  </div>
-                  <div className="text-left flex-1 min-w-0">
-                    <p className={`font-bold text-sm truncate ${selected ? 'text-slate-900 dark:text-slate-100' : 'text-slate-600 dark:text-slate-200'}`}>
-                      {title || id || toYouTubeWatchUrl(l.url)}
-                    </p>
-                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">
-                      {formatPublishedAt(l.publishedAt)}
-                    </p>
-                  </div>
+                  return (
+                    <button
+                      key={l.id}
+                      onClick={() => {
+                        setActiveId(l.id);
+                      }}
+                      className={`w-full flex items-center gap-4 p-4 rounded-3xl transition-all border ${
+                        selected
+                          ? 'bg-white dark:bg-slate-900 border-indigo-100 dark:border-indigo-900/30 shadow-md ring-1 ring-indigo-50 dark:ring-indigo-950/30'
+                          : 'bg-white/60 dark:bg-slate-900/40 border-slate-100 dark:border-slate-800 hover:bg-white dark:hover:bg-slate-900 hover:border-slate-200 dark:hover:border-slate-700'
+                      }`}
+                      aria-label={`Select ${title || id || 'episode'}`}
+                    >
+                      <div
+                        className={`p-3 rounded-2xl ${
+                          selected ? 'bg-indigo-600 text-white' : 'bg-slate-100 dark:bg-slate-800 text-slate-400 dark:text-slate-300'
+                        }`}
+                      >
+                        <Volume2 className="w-4 h-4" />
+                      </div>
+                      <div className="text-left flex-1 min-w-0">
+                        <p
+                          className={`font-bold text-sm truncate ${
+                            selected ? 'text-slate-900 dark:text-slate-100' : 'text-slate-600 dark:text-slate-200'
+                          }`}
+                        >
+                          {title || id || toYouTubeWatchUrl(l.url)}
+                        </p>
+                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">
+                          {formatPublishedAt(l.publishedAt)}
+                        </p>
+                      </div>
 
-                  {isPlayingThis && (
-                    <div className="flex gap-[2px] h-3" aria-hidden="true">
-                      <div className="w-[2px] h-full bg-indigo-500 animate-bounce-voice" />
-                      <div className="w-[2px] h-full bg-indigo-500 animate-bounce-voice" style={{ animationDelay: '0.1s' }} />
-                      <div className="w-[2px] h-full bg-indigo-500 animate-bounce-voice" style={{ animationDelay: '0.2s' }} />
-                    </div>
-                  )}
-                </button>
-              );
-            })}
+                      {isPlayingThis && (
+                        <div className="flex gap-[2px] h-3" aria-hidden="true">
+                          <div className="w-[2px] h-full bg-indigo-500 animate-bounce-voice" />
+                          <div className="w-[2px] h-full bg-indigo-500 animate-bounce-voice" style={{ animationDelay: '0.1s' }} />
+                          <div className="w-[2px] h-full bg-indigo-500 animate-bounce-voice" style={{ animationDelay: '0.2s' }} />
+                        </div>
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
           </div>
         )}
       </div>
