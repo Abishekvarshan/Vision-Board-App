@@ -108,10 +108,10 @@ export const VisionBoard: React.FC<Props> = ({ items, onAddItem, onDeleteItem })
                   </div>
 
         {/* Category Filter */}
-        <div className="flex items-center gap-3">
+        <div className="w-full sm:w-auto">
           <label
             htmlFor="vision-category-filter"
-            className="text-xs font-black text-slate-400 uppercase tracking-widest"
+            className="block text-xs font-black text-slate-400 uppercase tracking-widest mb-2 sm:mb-0"
           >
             Category
           </label>
@@ -119,7 +119,7 @@ export const VisionBoard: React.FC<Props> = ({ items, onAddItem, onDeleteItem })
             id="vision-category-filter"
             value={selectedCategoryFilter}
             onChange={(e) => setSelectedCategoryFilter(e.target.value)}
-            className="h-10 rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 px-4 text-sm font-semibold text-slate-700 dark:text-slate-200 shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/30"
+            className="w-full sm:w-auto h-11 sm:h-10 rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 px-4 text-sm font-semibold text-slate-700 dark:text-slate-200 shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/30"
           >
             <option value="All">All</option>
             {categoryOptions.map((cat) => (
