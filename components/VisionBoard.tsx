@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Plus, Trash2, Image as ImageIcon, X, Loader2, UploadCloud } from 'lucide-react';
 import { VisionItem, CATEGORIES, Category } from '../types';
 
@@ -12,6 +12,10 @@ interface Props {
 // IMPORTANT: Do not use Cloudinary API secret in frontend.
 const CLOUD_NAME = import.meta.env.VITE_CLOUDINARY_CLOUD_NAME;
 const UPLOAD_PRESET = import.meta.env.VITE_CLOUDINARY_UPLOAD_PRESET;
+const VISION_TAG = import.meta.env.VITE_CLOUDINARY_VISION_TAG || 'vision-board';
+
+const cloudinaryTagListUrl = (cloudName: string, tag: string) =>
+  `https://res.cloudinary.com/${cloudName}/image/list/${tag}.json`;
 
 export const VisionBoard: React.FC<Props> = ({ items, onAddItem, onDeleteItem }) => {
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -19,6 +23,95 @@ export const VisionBoard: React.FC<Props> = ({ items, onAddItem, onDeleteItem })
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [category, setCategory] = useState<Category>('Personal');
   const [isUploading, setIsUploading] = useState(false);
+
+  // Global images (visible to everyone): fetched from Cloudinary public tag list endpoint.
+  const [globalItems, setGlobalItems] = useState<VisionItem[]>([]);
+  const [isLoadingGlobal, setIsLoadingGlobal] = useState(false);
+  const [globalError, setGlobalError] = useState<string | null>(null);
+
+  const mergedItems = useMemo(() => {
+    // Show global items first, then any local items that aren't already present.
+    const seen = new Set(globalItems.map((i) => i.url));
+    const localOnly = items.filter((i) => !seen.has(i.url));
+    return [...globalItems, ...localOnly];
+  }, [globalItems, items]);
+
+  const isGlobalItem = useCallback((item: VisionItem) => {
+    return globalItems.some((g) => g.url === item.url);
+  }, [globalItems]);
+
+  const loadGlobalItems = async () => {
+    setIsLoadingGlobal(true);
+    setGlobalError(null);
+    try {
+      if (!CLOUD_NAME) throw new Error('Missing VITE_CLOUDINARY_CLOUD_NAME');
+
+      // Cloudinary provides a public JSON list for a tag if the account setting "JSON List" is enabled.
+      // URL format: https://res.cloudinary.com/<cloud_name>/image/list/<tag>.json
+      // Add a cache-buster so the list updates quickly when new images are added.
+      const url = `${cloudinaryTagListUrl(CLOUD_NAME, VISION_TAG)}?t=${Date.now()}`;
+      const r = await fetch(url, { cache: 'no-store' });
+      if (!r.ok) {
+        // When JSON lists are disabled, Cloudinary often responds 401 with a non-JSON body.
+        const text = await r.text().catch(() => '');
+        throw new Error(
+          `Cloudinary tag list is not accessible (HTTP ${r.status}). ` +
+          `Enable Cloudinary "JSON lists" (Settings → Security → JSON lists), then retry. ` +
+          (text ? `Response: ${text.slice(0, 200)}` : '')
+        );
+      }
+
+      let data: any;
+      try {
+        data = await r.json();
+      } catch {
+        throw new Error('Cloudinary tag list response was not valid JSON. Check Cloudinary JSON lists setting.');
+      }
+
+      const resources = data?.resources || [];
+
+      if (!Array.isArray(resources) || resources.length === 0) {
+        setGlobalItems([]);
+        return;
+      }
+
+      const normalized: VisionItem[] = resources.map((img: any) => {
+        // Depending on Cloudinary settings, the JSON list may include `secure_url` / `url`.
+        // If not present, we can deterministically construct the delivery URL.
+        const fallbackUrl = img?.public_id && img?.format
+          ? `https://res.cloudinary.com/${CLOUD_NAME}/image/upload/${img.public_id}.${img.format}`
+          : '';
+
+        const src = img?.secure_url || img?.url || fallbackUrl;
+
+        return {
+          id: img.asset_id || img.public_id || crypto.randomUUID(),
+          url: src,
+          category: 'Personal',
+          caption: '',
+          createdAt: img.created_at ? Date.parse(img.created_at) : Date.now(),
+        };
+      }).filter((i: VisionItem) => Boolean(i.url));
+
+      setGlobalItems(normalized);
+    } catch (e: any) {
+      console.error(e);
+      setGlobalError(e?.message || String(e));
+    } finally {
+      setIsLoadingGlobal(false);
+    }
+  };
+
+  useEffect(() => {
+    loadGlobalItems();
+
+    // Poll periodically so the gallery updates automatically when new images are added to Cloudinary.
+    const id = window.setInterval(() => {
+      loadGlobalItems();
+    }, 20_000);
+
+    return () => window.clearInterval(id);
+  }, []);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -34,6 +127,8 @@ export const VisionBoard: React.FC<Props> = ({ items, onAddItem, onDeleteItem })
     const formData = new FormData();
     formData.append('file', file);
     formData.append('upload_preset', UPLOAD_PRESET);
+    // Ensure uploads are discoverable for everyone.
+    formData.append('tags', VISION_TAG);
 
     try {
       const response = await fetch(`https://api.cloudinary.com/v1_1/${CLOUD_NAME}/image/upload`, {
@@ -70,6 +165,9 @@ export const VisionBoard: React.FC<Props> = ({ items, onAddItem, onDeleteItem })
         category,
         createdAt: Date.now()
       });
+
+      // Refresh global list so everyone sees new uploads immediately on this client.
+      loadGlobalItems();
       
       resetForm();
     } catch (err) {
@@ -105,7 +203,7 @@ export const VisionBoard: React.FC<Props> = ({ items, onAddItem, onDeleteItem })
 
       {/* Pinterest-style masonry layout */}
       <div className="columns-2 sm:columns-3 lg:columns-4 gap-4 [column-fill:_balance]">
-        {items.length === 0 ? (
+        {(mergedItems.length === 0 && !isLoadingGlobal) ? (
           <div className="col-span-full py-32 border-2 border-dashed border-slate-200 dark:border-slate-800 rounded-[2.5rem] flex flex-col items-center justify-center text-slate-400 bg-white/50 dark:bg-slate-900/30">
             <div className="p-5 bg-slate-100 dark:bg-slate-800 rounded-full mb-4">
               <ImageIcon className="w-12 h-12 opacity-30" />
@@ -114,7 +212,7 @@ export const VisionBoard: React.FC<Props> = ({ items, onAddItem, onDeleteItem })
             <p className="text-sm text-slate-500 dark:text-slate-400">Click the button to add your first goal.</p>
           </div>
         ) : (
-          items.map(item => (
+          mergedItems.map(item => (
             <div key={item.id} className="mb-4 break-inside-avoid">
               <div className="group relative bg-white dark:bg-slate-900 rounded-[1.75rem] overflow-hidden shadow-sm hover:shadow-2xl transition-all duration-500 border border-slate-100 dark:border-slate-800">
                 <img
@@ -128,6 +226,8 @@ export const VisionBoard: React.FC<Props> = ({ items, onAddItem, onDeleteItem })
                   onClick={() => onDeleteItem(item.id)}
                   className="absolute top-3 right-3 p-2 bg-white/90 backdrop-blur-md text-red-500 rounded-full opacity-0 group-hover:opacity-100 transition-all hover:bg-red-50"
                   aria-label="Delete"
+                  disabled={isGlobalItem(item)}
+                  title={isGlobalItem(item) ? 'Shared image (cannot delete from Cloudinary here)' : 'Delete'}
                 >
                   <Trash2 className="w-4 h-4" />
                 </button>
@@ -136,6 +236,25 @@ export const VisionBoard: React.FC<Props> = ({ items, onAddItem, onDeleteItem })
           ))
         )}
       </div>
+
+      {!isLoadingGlobal && !globalError && globalItems.length === 0 && (
+        <div className="text-sm text-slate-500 dark:text-slate-400">
+          No shared images yet. Upload one and it will appear here for everyone.
+        </div>
+      )}
+
+      {(isLoadingGlobal || globalError) && (
+        <div className="text-sm text-slate-500 dark:text-slate-400">
+          {isLoadingGlobal ? (
+            <span className="inline-flex items-center gap-2"><Loader2 className="w-4 h-4 animate-spin" /> Loading shared vision board…</span>
+          ) : (
+            <span>
+              Failed to load shared images: {globalError}{' '}
+              <button className="underline" onClick={loadGlobalItems}>Retry</button>
+            </span>
+          )}
+        </div>
+      )}
 
       {/* Upload Modal */}
       {isModalOpen && (
