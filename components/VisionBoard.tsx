@@ -292,6 +292,7 @@ export const VisionBoard: React.FC<Props> = ({ items, onAddItem, onDeleteItem })
                 />
 
                 <button
+                  type="button"
                   onClick={() => {
                     if (isGlobalItem(item)) {
                       deleteGlobalItem(item);
@@ -299,7 +300,9 @@ export const VisionBoard: React.FC<Props> = ({ items, onAddItem, onDeleteItem })
                       onDeleteItem(item.id);
                     }
                   }}
-                  className="absolute top-3 right-3 p-2 bg-white/90 backdrop-blur-md text-red-500 rounded-full opacity-0 group-hover:opacity-100 transition-all hover:bg-red-50"
+                  // On desktop we reveal the delete button on hover.
+                  // On mobile there is no hover, so keep it visible to ensure the confirm() can be triggered.
+                  className="absolute top-3 right-3 p-2 bg-white/90 backdrop-blur-md text-red-500 rounded-full opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-all hover:bg-red-50"
                   aria-label="Delete"
                   disabled={isGlobalItem(item) && (!CLOUDINARY_DELETE_ENDPOINT || !item.publicId)}
                   title={isGlobalItem(item)
