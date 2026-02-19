@@ -46,3 +46,52 @@ Add these to your local `.env`:
 - `VITE_CLOUDINARY_VISION_TAG` (defaults to `vision-board`)
 
 Uploads are tagged with `VITE_CLOUDINARY_VISION_TAG` so they appear in the shared list.
+
+---
+
+## Deleting shared (Cloudinary) images (including n8n uploads)
+
+By default, images that come from the Cloudinary **tag list** are "shared" (global) images. Deleting those requires a **server-side** call to Cloudinary (Admin API), so the frontend cannot do it directly.
+
+This repo includes ready-to-deploy serverless delete functions for **Vercel** and **Netlify**.
+
+### Option 1: Vercel
+
+1) Deploy the repo to Vercel.
+
+2) Set these **server** environment variables in Vercel (Project → Settings → Environment Variables):
+
+- `CLOUDINARY_CLOUD_NAME`
+- `CLOUDINARY_API_KEY`
+- `CLOUDINARY_API_SECRET`
+
+3) In your frontend env (`.env`), set:
+
+```
+VITE_CLOUDINARY_DELETE_ENDPOINT=/api/cloudinary-delete
+```
+
+Now the delete button for shared images will call the Vercel function.
+
+### Option 2: Netlify
+
+1) Deploy the repo to Netlify.
+
+2) Set these **server** environment variables in Netlify (Site settings → Environment variables):
+
+- `CLOUDINARY_CLOUD_NAME`
+- `CLOUDINARY_API_KEY`
+- `CLOUDINARY_API_SECRET`
+
+3) In your frontend env (`.env`), set:
+
+```
+VITE_CLOUDINARY_DELETE_ENDPOINT=/.netlify/functions/cloudinary-delete
+```
+
+Now the delete button for shared images will call the Netlify function.
+
+### Notes
+
+- Your n8n workflow must upload to Cloudinary using the same tag (`VITE_CLOUDINARY_VISION_TAG`) so the image appears in the board.
+- The UI uses Cloudinary `public_id` (from the tag list JSON) to delete. If `public_id` isn't present in the JSON list response, enable Cloudinary JSON lists and ensure the response includes it.

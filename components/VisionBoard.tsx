@@ -17,6 +17,16 @@ const VISION_TAG = import.meta.env.VITE_CLOUDINARY_VISION_TAG || 'vision-board';
 const cloudinaryTagListUrl = (cloudName: string, tag: string) =>
   `https://res.cloudinary.com/${cloudName}/image/list/${tag}.json`;
 
+// Optional endpoint that can delete a Cloudinary asset by publicId.
+// You can implement this as:
+// - an n8n webhook
+// - a Cloud Function
+// - any small backend
+// It MUST use Cloudinary Admin API credentials server-side.
+// Expected payload: { publicId: string }
+// Expected response: 2xx on success.
+const CLOUDINARY_DELETE_ENDPOINT = import.meta.env.VITE_CLOUDINARY_DELETE_ENDPOINT as string | undefined;
+
 export const VisionBoard: React.FC<Props> = ({ items, onAddItem, onDeleteItem }) => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
@@ -87,6 +97,7 @@ export const VisionBoard: React.FC<Props> = ({ items, onAddItem, onDeleteItem })
         return {
           id: img.asset_id || img.public_id || crypto.randomUUID(),
           url: src,
+          publicId: img.public_id,
           category: 'Personal',
           caption: '',
           createdAt: img.created_at ? Date.parse(img.created_at) : Date.now(),
@@ -123,7 +134,7 @@ export const VisionBoard: React.FC<Props> = ({ items, onAddItem, onDeleteItem })
     }
   };
 
-  const uploadToCloudinary = async (file: File): Promise<string> => {
+  const uploadToCloudinary = async (file: File): Promise<{ secureUrl: string; publicId?: string }> => {
     const formData = new FormData();
     formData.append('file', file);
     formData.append('upload_preset', UPLOAD_PRESET);
@@ -141,11 +152,11 @@ export const VisionBoard: React.FC<Props> = ({ items, onAddItem, onDeleteItem })
       }
 
       const data = await response.json();
-      return data.secure_url;
+      return { secureUrl: data.secure_url, publicId: data.public_id };
     } catch (error) {
       console.error('Error uploading to Cloudinary:', error);
       // Fallback to base64 if Cloudinary fails (for demo purposes)
-      return previewUrl || '';
+      return { secureUrl: previewUrl || '' };
     }
   };
 
@@ -156,11 +167,12 @@ export const VisionBoard: React.FC<Props> = ({ items, onAddItem, onDeleteItem })
     setIsUploading(true);
     
     try {
-      const uploadedUrl = await uploadToCloudinary(selectedFile);
+      const { secureUrl, publicId } = await uploadToCloudinary(selectedFile);
       
       onAddItem({
         id: crypto.randomUUID(),
-        url: uploadedUrl,
+        url: secureUrl,
+        publicId,
         caption: '',
         category,
         createdAt: Date.now()
@@ -181,6 +193,41 @@ export const VisionBoard: React.FC<Props> = ({ items, onAddItem, onDeleteItem })
     setSelectedFile(null);
     setPreviewUrl(null);
     setIsModalOpen(false);
+  };
+
+  const deleteGlobalItem = async (item: VisionItem) => {
+    if (!item.publicId) {
+      alert('Cannot delete: missing Cloudinary public_id for this image.');
+      return;
+    }
+    if (!CLOUDINARY_DELETE_ENDPOINT) {
+      alert('Delete is not configured. Set VITE_CLOUDINARY_DELETE_ENDPOINT to a server-side delete endpoint.');
+      return;
+    }
+
+    const ok = confirm('Delete this shared image for everyone?');
+    if (!ok) return;
+
+    try {
+      const r = await fetch(CLOUDINARY_DELETE_ENDPOINT, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ publicId: item.publicId }),
+      });
+      if (!r.ok) {
+        const text = await r.text().catch(() => '');
+        throw new Error(`Delete failed (HTTP ${r.status}) ${text ? `- ${text.slice(0, 200)}` : ''}`);
+      }
+      // Refresh shared list.
+      await loadGlobalItems();
+
+      // Also remove any matching local items (e.g., if the user also saved it locally earlier)
+      // so it disappears immediately even if Cloudinary list is cached.
+      onDeleteItem(item.id);
+    } catch (e: any) {
+      console.error(e);
+      alert(e?.message || 'Failed to delete shared image');
+    }
   };
 
   return (
@@ -223,11 +270,21 @@ export const VisionBoard: React.FC<Props> = ({ items, onAddItem, onDeleteItem })
                 />
 
                 <button
-                  onClick={() => onDeleteItem(item.id)}
+                  onClick={() => {
+                    if (isGlobalItem(item)) {
+                      deleteGlobalItem(item);
+                    } else {
+                      onDeleteItem(item.id);
+                    }
+                  }}
                   className="absolute top-3 right-3 p-2 bg-white/90 backdrop-blur-md text-red-500 rounded-full opacity-0 group-hover:opacity-100 transition-all hover:bg-red-50"
                   aria-label="Delete"
-                  disabled={isGlobalItem(item)}
-                  title={isGlobalItem(item) ? 'Shared image (cannot delete from Cloudinary here)' : 'Delete'}
+                  disabled={isGlobalItem(item) && (!CLOUDINARY_DELETE_ENDPOINT || !item.publicId)}
+                  title={isGlobalItem(item)
+                    ? (CLOUDINARY_DELETE_ENDPOINT
+                      ? (item.publicId ? 'Delete shared image (calls your server-side endpoint)' : 'Shared image missing public_id (cannot delete)')
+                      : 'Shared image: set VITE_CLOUDINARY_DELETE_ENDPOINT to enable delete')
+                    : 'Delete'}
                 >
                   <Trash2 className="w-4 h-4" />
                 </button>

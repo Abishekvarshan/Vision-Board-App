@@ -2,6 +2,8 @@
 export interface VisionItem {
   id: string;
   url: string;
+  /** Cloudinary public_id (needed for server-side deletion). Optional for legacy/local-only items. */
+  publicId?: string;
   category: string;
   caption: string;
   createdAt: number;
