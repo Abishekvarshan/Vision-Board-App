@@ -29,9 +29,9 @@ export default async function handler(req: Req, res: Res) {
   }
 
   try {
-    const cloudName = process.env.CLOUDINARY_CLOUD_NAME || 'do0vru2lm';
-    const apiKey    = process.env.CLOUDINARY_API_KEY    || '721966247349349';
-    const apiSecret = process.env.CLOUDINARY_API_SECRET || 'fIyuWNJbF964jHUergtHSQJH3Qw';
+    const cloudName = 'do0vru2lm';
+    const apiKey    = '721966247349349';
+    const apiSecret = 'fIyuWNJbF964jHUergtHSQJH3Qw';
 
     const publicId = (req.body?.publicId || req.query?.publicId) as string | undefined;
     if (!publicId) {
