@@ -19,6 +19,16 @@ View your app in AI Studio: https://ai.studio/apps/drive/1kWF0lbx_wpvON_zITpDp5f
 3. Run the app:
    `npm run dev`
 
+### If local changes don't show up (PWA cache)
+
+This app uses a PWA service worker (Workbox). If you previously opened the app, the service worker can serve **cached/stale JS**.
+
+To fully refresh your local app:
+
+1) In Chrome/Edge: **DevTools → Application → Service Workers → Unregister**
+2) In DevTools: **Application → Storage → Clear site data**
+3) Hard refresh.
+
 ---
 
 ## Shared Vision Board (Cloudinary)

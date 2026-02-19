@@ -20,6 +20,11 @@ export default defineConfig(({ mode }) => {
         react(),
         VitePWA({
           registerType: 'autoUpdate',
+          // Service worker caching can make local development confusing (stale JS/env).
+          // Disable SW entirely in dev mode.
+          devOptions: {
+            enabled: mode !== 'development',
+          },
           includeAssets: ['favicon.svg', 'pwa/apple-touch-icon.png'],
           manifest: {
             name: 'Vision Board',

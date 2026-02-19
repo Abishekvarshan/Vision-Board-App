@@ -24,6 +24,18 @@ function json(res: Res, status: number, body: any) {
 }
 
 export default async function handler(req: Req, res: Res) {
+  // CORS: allow calling from localhost during development.
+  // In production you can restrict this by checking `Origin`.
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+  res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
+
+  if (req.method === 'OPTIONS') {
+    // Preflight request
+    res.status(204);
+    return res.end();
+  }
+
   if (req.method !== 'POST') {
     res.setHeader('Allow', 'POST');
     return json(res, 405, { error: 'Method not allowed' });

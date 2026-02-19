@@ -26,8 +26,14 @@ const cloudinaryTagListUrl = (cloudName: string, tag: string) =>
 // Expected payload: { publicId: string }
 // Expected response: 2xx on success.
 const CLOUDINARY_DELETE_ENDPOINT = import.meta.env.VITE_CLOUDINARY_DELETE_ENDPOINT as string | undefined;
+const DEBUG = import.meta.env.DEV;
 
 export const VisionBoard: React.FC<Props> = ({ items, onAddItem, onDeleteItem }) => {
+  // Debug (helps when local is served by stale PWA cache / missing env vars)
+  useEffect(() => {
+    if (DEBUG) console.log('[VisionBoard] VITE_CLOUDINARY_DELETE_ENDPOINT:', CLOUDINARY_DELETE_ENDPOINT);
+  }, []);
+
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
@@ -196,6 +202,15 @@ export const VisionBoard: React.FC<Props> = ({ items, onAddItem, onDeleteItem })
   };
 
   const deleteGlobalItem = async (item: VisionItem) => {
+    if (DEBUG) {
+      console.log('[VisionBoard] deleteGlobalItem clicked', {
+        publicId: item.publicId,
+        endpoint: CLOUDINARY_DELETE_ENDPOINT,
+        itemId: item.id,
+        url: item.url,
+      });
+    }
+
     if (!item.publicId) {
       alert('Cannot delete: missing Cloudinary public_id for this image.');
       return;
@@ -209,15 +224,22 @@ export const VisionBoard: React.FC<Props> = ({ items, onAddItem, onDeleteItem })
     if (!ok) return;
 
     try {
+      if (DEBUG) console.log('[VisionBoard] calling delete endpoint...', CLOUDINARY_DELETE_ENDPOINT);
       const r = await fetch(CLOUDINARY_DELETE_ENDPOINT, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ publicId: item.publicId }),
       });
+
+      if (DEBUG) console.log('[VisionBoard] delete response status', r.status);
       if (!r.ok) {
         const text = await r.text().catch(() => '');
+        if (DEBUG) console.log('[VisionBoard] delete response body', text);
         throw new Error(`Delete failed (HTTP ${r.status}) ${text ? `- ${text.slice(0, 200)}` : ''}`);
       }
+
+      const okBody = await r.text().catch(() => '');
+      if (DEBUG && okBody) console.log('[VisionBoard] delete success body', okBody.slice(0, 500));
       // Refresh shared list.
       await loadGlobalItems();
 
