@@ -76,10 +76,13 @@ export default defineConfig(({ mode }) => {
         rollupOptions: {
           output: {
             manualChunks: {
-              'react-vendor':    ['react', 'react-dom'],
-              'firebase-vendor': ['firebase'],
-              'genai-vendor':    ['@google/genai'],
-              'icons-vendor':    ['lucide-react'],
+              'react-vendor':     ['react', 'react-dom'],
+              'firebase-app':     ['firebase/app'],
+              'firebase-auth':    ['firebase/auth'],
+              'firebase-store':   ['firebase/firestore'],
+              'firebase-storage': ['firebase/storage'],
+              'genai-vendor':     ['@google/genai'],
+              'icons-vendor':     ['lucide-react'],
             }
           }
         }
