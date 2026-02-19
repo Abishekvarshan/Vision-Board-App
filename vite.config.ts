@@ -10,7 +10,6 @@ export default defineConfig(({ mode }) => {
       server: {
         port: 3000,
         host: '0.0.0.0',
-        // Allow Google Sign-In popup to work without COOP/COEP-related console spam
         headers: {
           'Cross-Origin-Opener-Policy': 'same-origin-allow-popups',
           'Cross-Origin-Embedder-Policy': 'unsafe-none',
@@ -20,8 +19,6 @@ export default defineConfig(({ mode }) => {
         react(),
         VitePWA({
           registerType: 'autoUpdate',
-          // Service worker caching can make local development confusing (stale JS/env).
-          // Disable SW entirely in dev mode.
           devOptions: {
             enabled: mode !== 'development',
           },
@@ -61,7 +58,6 @@ export default defineConfig(({ mode }) => {
             ],
           },
           workbox: {
-            // Cache app shell assets for offline installability
             globPatterns: ['**/*.{js,css,html,svg,png,webmanifest}'],
           },
         }),
@@ -73,6 +69,19 @@ export default defineConfig(({ mode }) => {
       resolve: {
         alias: {
           '@': path.resolve(__dirname, '.'),
+        }
+      },
+      build: {
+        chunkSizeWarningLimit: 1000,
+        rollupOptions: {
+          output: {
+            manualChunks: {
+              'react-vendor':    ['react', 'react-dom'],
+              'firebase-vendor': ['firebase'],
+              'genai-vendor':    ['@google/genai'],
+              'icons-vendor':    ['lucide-react'],
+            }
+          }
         }
       }
     };
