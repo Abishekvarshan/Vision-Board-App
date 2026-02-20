@@ -17,19 +17,10 @@ const VISION_TAG = import.meta.env.VITE_CLOUDINARY_VISION_TAG || 'vision-board';
 const cloudinaryTagListUrl = (cloudName: string, tag: string) =>
   `https://res.cloudinary.com/${cloudName}/image/list/${tag}.json`;
 
-// Optional endpoint that can delete a Cloudinary asset by publicId.
-// You can implement this as:
-// - an n8n webhook
-// - a Cloud Function
-// - any small backend
-// It MUST use Cloudinary Admin API credentials server-side.
-// Expected payload: { publicId: string }
-// Expected response: 2xx on success.
 const CLOUDINARY_DELETE_ENDPOINT = import.meta.env.VITE_CLOUDINARY_DELETE_ENDPOINT as string | undefined;
 const DEBUG = import.meta.env.DEV;
 
 export const VisionBoard: React.FC<Props> = ({ items, onAddItem, onDeleteItem }) => {
-  // Debug (helps when local is served by stale PWA cache / missing env vars)
   useEffect(() => {
     if (DEBUG) console.log('[VisionBoard] VITE_CLOUDINARY_DELETE_ENDPOINT:', CLOUDINARY_DELETE_ENDPOINT);
   }, []);
@@ -40,13 +31,14 @@ export const VisionBoard: React.FC<Props> = ({ items, onAddItem, onDeleteItem })
   const [category, setCategory] = useState<Category>('Personal');
   const [isUploading, setIsUploading] = useState(false);
 
-  // Global images (visible to everyone): fetched from Cloudinary public tag list endpoint.
+  // Track which image card is "selected" (clicked) to reveal delete button
+  const [selectedItemId, setSelectedItemId] = useState<string | null>(null);
+
   const [globalItems, setGlobalItems] = useState<VisionItem[]>([]);
   const [isLoadingGlobal, setIsLoadingGlobal] = useState(false);
   const [globalError, setGlobalError] = useState<string | null>(null);
 
   const mergedItems = useMemo(() => {
-    // Show global items first, then any local items that aren't already present.
     const seen = new Set(globalItems.map((i) => i.url));
     const localOnly = items.filter((i) => !seen.has(i.url));
     return [...globalItems, ...localOnly];
@@ -62,13 +54,9 @@ export const VisionBoard: React.FC<Props> = ({ items, onAddItem, onDeleteItem })
     try {
       if (!CLOUD_NAME) throw new Error('Missing VITE_CLOUDINARY_CLOUD_NAME');
 
-      // Cloudinary provides a public JSON list for a tag if the account setting "JSON List" is enabled.
-      // URL format: https://res.cloudinary.com/<cloud_name>/image/list/<tag>.json
-      // Add a cache-buster so the list updates quickly when new images are added.
       const url = `${cloudinaryTagListUrl(CLOUD_NAME, VISION_TAG)}?t=${Date.now()}`;
       const r = await fetch(url, { cache: 'no-store' });
       if (!r.ok) {
-        // When JSON lists are disabled, Cloudinary often responds 401 with a non-JSON body.
         const text = await r.text().catch(() => '');
         throw new Error(
           `Cloudinary tag list is not accessible (HTTP ${r.status}). ` +
@@ -92,8 +80,6 @@ export const VisionBoard: React.FC<Props> = ({ items, onAddItem, onDeleteItem })
       }
 
       const normalized: VisionItem[] = resources.map((img: any) => {
-        // Depending on Cloudinary settings, the JSON list may include `secure_url` / `url`.
-        // If not present, we can deterministically construct the delivery URL.
         const fallbackUrl = img?.public_id && img?.format
           ? `https://res.cloudinary.com/${CLOUD_NAME}/image/upload/${img.public_id}.${img.format}`
           : '';
@@ -122,12 +108,23 @@ export const VisionBoard: React.FC<Props> = ({ items, onAddItem, onDeleteItem })
   useEffect(() => {
     loadGlobalItems();
 
-    // Poll periodically so the gallery updates automatically when new images are added to Cloudinary.
     const id = window.setInterval(() => {
       loadGlobalItems();
     }, 20_000);
 
     return () => window.clearInterval(id);
+  }, []);
+
+  // Clicking outside any card deselects the current card
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      const target = e.target as HTMLElement;
+      if (!target.closest('[data-vision-card]')) {
+        setSelectedItemId(null);
+      }
+    };
+    document.addEventListener('click', handleClickOutside);
+    return () => document.removeEventListener('click', handleClickOutside);
   }, []);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -144,7 +141,6 @@ export const VisionBoard: React.FC<Props> = ({ items, onAddItem, onDeleteItem })
     const formData = new FormData();
     formData.append('file', file);
     formData.append('upload_preset', UPLOAD_PRESET);
-    // Ensure uploads are discoverable for everyone.
     formData.append('tags', VISION_TAG);
 
     try {
@@ -161,7 +157,6 @@ export const VisionBoard: React.FC<Props> = ({ items, onAddItem, onDeleteItem })
       return { secureUrl: data.secure_url, publicId: data.public_id };
     } catch (error) {
       console.error('Error uploading to Cloudinary:', error);
-      // Fallback to base64 if Cloudinary fails (for demo purposes)
       return { secureUrl: previewUrl || '' };
     }
   };
@@ -184,9 +179,7 @@ export const VisionBoard: React.FC<Props> = ({ items, onAddItem, onDeleteItem })
         createdAt: Date.now()
       });
 
-      // Refresh global list so everyone sees new uploads immediately on this client.
       loadGlobalItems();
-      
       resetForm();
     } catch (err) {
       alert("Failed to upload image. Please check your Cloudinary configuration.");
@@ -240,11 +233,8 @@ export const VisionBoard: React.FC<Props> = ({ items, onAddItem, onDeleteItem })
 
       const okBody = await r.text().catch(() => '');
       if (DEBUG && okBody) console.log('[VisionBoard] delete success body', okBody.slice(0, 500));
-      // Refresh shared list.
-      await loadGlobalItems();
 
-      // Also remove any matching local items (e.g., if the user also saved it locally earlier)
-      // so it disappears immediately even if Cloudinary list is cached.
+      await loadGlobalItems();
       onDeleteItem(item.id);
     } catch (e: any) {
       console.error(e);
@@ -252,12 +242,18 @@ export const VisionBoard: React.FC<Props> = ({ items, onAddItem, onDeleteItem })
     }
   };
 
+  const handleCardClick = (e: React.MouseEvent, itemId: string) => {
+    // Don't toggle selection if the delete button itself was clicked
+    if ((e.target as HTMLElement).closest('button[aria-label="Delete"]')) return;
+    setSelectedItemId(prev => prev === itemId ? null : itemId);
+  };
+
   return (
     <div className="space-y-8 animate-in fade-in duration-500">
       <div className="flex flex-col sm:flex-row sm:justify-between sm:items-end gap-4">
         <div>
           <h2 className="text-3xl font-bold text-slate-900 dark:text-slate-100 tracking-tight">Vision Board</h2>
-                  </div>
+        </div>
       </div>
 
       {/* Floating action button (bottom-left) */}
@@ -281,41 +277,51 @@ export const VisionBoard: React.FC<Props> = ({ items, onAddItem, onDeleteItem })
             <p className="text-sm text-slate-500 dark:text-slate-400">Click the button to add your first goal.</p>
           </div>
         ) : (
-          mergedItems.map(item => (
-            <div key={item.id} className="mb-4 break-inside-avoid">
-              <div className="group relative bg-white dark:bg-slate-900 rounded-[1.75rem] overflow-hidden shadow-sm hover:shadow-2xl transition-all duration-500 border border-slate-100 dark:border-slate-800">
-                <img
-                  src={item.url}
-                  alt="Vision"
-                  className="w-full h-auto object-cover group-hover:scale-[1.02] transition-transform duration-500"
-                  loading="lazy"
-                />
-
-                <button
-                  type="button"
-                  onClick={() => {
-                    if (isGlobalItem(item)) {
-                      deleteGlobalItem(item);
-                    } else {
-                      onDeleteItem(item.id);
-                    }
-                  }}
-                  // On desktop we reveal the delete button on hover.
-                  // On mobile there is no hover, so keep it visible to ensure the confirm() can be triggered.
-                  className="absolute top-3 right-3 p-2 bg-white/90 backdrop-blur-md text-red-500 rounded-full opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-all hover:bg-red-50"
-                  aria-label="Delete"
-                  disabled={isGlobalItem(item) && (!CLOUDINARY_DELETE_ENDPOINT || !item.publicId)}
-                  title={isGlobalItem(item)
-                    ? (CLOUDINARY_DELETE_ENDPOINT
-                      ? (item.publicId ? 'Delete shared image (calls your server-side endpoint)' : 'Shared image missing public_id (cannot delete)')
-                      : 'Shared image: set VITE_CLOUDINARY_DELETE_ENDPOINT to enable delete')
-                    : 'Delete'}
+          mergedItems.map(item => {
+            const isSelected = selectedItemId === item.id;
+            return (
+              <div key={item.id} className="mb-4 break-inside-avoid">
+                <div
+                  data-vision-card
+                  onClick={(e) => handleCardClick(e, item.id)}
+                  className="group relative bg-white dark:bg-slate-900 rounded-[1.75rem] overflow-hidden shadow-sm hover:shadow-2xl transition-all duration-500 border border-slate-100 dark:border-slate-800 cursor-pointer"
                 >
-                  <Trash2 className="w-4 h-4" />
-                </button>
+                  <img
+                    src={item.url}
+                    alt="Vision"
+                    className="w-full h-auto object-cover group-hover:scale-[1.02] transition-transform duration-500"
+                    loading="lazy"
+                  />
+
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      if (isGlobalItem(item)) {
+                        deleteGlobalItem(item);
+                      } else {
+                        onDeleteItem(item.id);
+                      }
+                    }}
+                    className={`absolute top-3 right-3 p-2 bg-white/90 backdrop-blur-md text-red-500 rounded-full transition-all duration-200 hover:bg-red-50 ${
+                      isSelected
+                        ? 'opacity-100 scale-100 pointer-events-auto'
+                        : 'opacity-0 scale-90 pointer-events-none'
+                    }`}
+                    aria-label="Delete"
+                    disabled={isGlobalItem(item) && (!CLOUDINARY_DELETE_ENDPOINT || !item.publicId)}
+                    title={isGlobalItem(item)
+                      ? (CLOUDINARY_DELETE_ENDPOINT
+                        ? (item.publicId ? 'Delete shared image (calls your server-side endpoint)' : 'Shared image missing public_id (cannot delete)')
+                        : 'Shared image: set VITE_CLOUDINARY_DELETE_ENDPOINT to enable delete')
+                      : 'Delete'}
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </button>
+                </div>
               </div>
-            </div>
-          ))
+            );
+          })
         )}
       </div>
 
