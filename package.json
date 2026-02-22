@@ -16,7 +16,8 @@
     "firebase": "^10.14.1",
     "lucide-react": "^0.563.0",
     "react": "^19.2.4",
-    "react-dom": "^19.2.4"
+    "react-dom": "^19.2.4",
+    "workbox-precaching": "^7.4.0"
   },
   "devDependencies": {
     "@types/node": "^22.14.0",

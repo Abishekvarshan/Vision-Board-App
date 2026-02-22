@@ -18,9 +18,19 @@ export default defineConfig(({ mode }) => {
       plugins: [
         react(),
         VitePWA({
+          // We need a custom service worker to handle push notifications.
+          // `injectManifest` lets us add `push` handlers while still using Workbox precaching.
+          strategies: 'injectManifest',
+          srcDir: 'src',
+          filename: 'sw.ts',
+          // We'll register the SW ourselves so we can set `type: 'module'` in dev.
+          // The default dev registration uses `type: 'classic'`, which fails because dev-sw is ESM.
+          injectRegister: null,
           registerType: 'autoUpdate',
           devOptions: {
-            enabled: mode !== 'development',
+            // Enable SW during development so we can test push locally.
+            // NOTE: For local push testing you should use https or localhost.
+            enabled: true,
           },
           includeAssets: ['favicon.svg', 'pwa/apple-touch-icon.png'],
           manifest: {
@@ -57,7 +67,7 @@ export default defineConfig(({ mode }) => {
               },
             ],
           },
-          workbox: {
+          injectManifest: {
             globPatterns: ['**/*.{js,css,html,svg,png,webmanifest}'],
           },
         }),

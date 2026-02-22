@@ -10,6 +10,7 @@ import {
 } from 'firebase/auth';
 import { Layout, Menu, Moon, Sun, User as UserIcon, LogOut } from 'lucide-react';
 import { auth } from '../src/firebase';
+import { enableDailyReminderPush } from '../src/push';
 
 type Props = {
   children: (user: User) => React.ReactNode;
@@ -21,6 +22,10 @@ export const AuthGate: React.FC<Props> = ({ children }) => {
   const [error, setError] = useState<string | null>(null);
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement | null>(null);
+  const [pushEnabled, setPushEnabled] = useState(false);
+  const [pushBusy, setPushBusy] = useState(false);
+  const [pushError, setPushError] = useState<string | null>(null);
+  const [pushTokenPreview, setPushTokenPreview] = useState<string | null>(null);
 
   const [theme, setTheme] = useState<'light' | 'dark'>(() => {
     try {
@@ -99,6 +104,23 @@ export const AuthGate: React.FC<Props> = ({ children }) => {
     } catch (err: any) {
       console.error('Sign out failed', err);
       setError(err?.message ?? 'Sign out failed');
+    }
+  };
+
+  const onEnablePush = async () => {
+    if (!user) return;
+    setPushError(null);
+    setPushTokenPreview(null);
+    setPushBusy(true);
+    try {
+      const { token } = await enableDailyReminderPush(user.uid);
+      setPushTokenPreview(token);
+      setPushEnabled(true);
+    } catch (e: any) {
+      console.error('Enable push failed', e);
+      setPushError(e?.message ?? 'Failed to enable push notifications');
+    } finally {
+      setPushBusy(false);
     }
   };
 
@@ -192,6 +214,35 @@ export const AuthGate: React.FC<Props> = ({ children }) => {
                   {theme === 'dark' ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
                   {theme === 'dark' ? 'Light mode' : 'Dark mode'}
                 </button>
+
+                <button
+                  onClick={async () => {
+                    setMenuOpen(false);
+                    await onEnablePush();
+                  }}
+                  disabled={pushBusy || pushEnabled}
+                  className="w-full px-4 py-3 text-left text-sm font-semibold text-indigo-700 dark:text-indigo-200 hover:bg-indigo-50 dark:hover:bg-indigo-950/30 flex items-center gap-2 disabled:opacity-60"
+                  title="Enable daily reminder notifications (requires permission)"
+                >
+                  <span className="inline-flex items-center justify-center w-5">🔔</span>
+                  {pushEnabled ? 'Daily reminders enabled' : pushBusy ? 'Enabling reminders…' : 'Enable daily reminders'}
+                </button>
+
+                {/* {pushError && (
+                  <div className="px-4 pb-3 text-xs text-red-600 dark:text-red-400">
+                    {pushError}
+                  </div>
+                )}
+
+                {pushTokenPreview && (
+                  <div className="px-4 pb-3 text-[11px] text-slate-600 dark:text-slate-300 break-all">
+                    <div className="font-semibold text-slate-700 dark:text-slate-200">FCM token</div>
+                    <div className="mt-1">{pushTokenPreview}</div>
+                    <div className="mt-1 text-slate-500 dark:text-slate-400">
+                      Saved to Firestore at <code>users/{user.uid}/pushTokens/*</code>
+                    </div>
+                  </div>
+                )} */}
 
                 <button
                   onClick={() => {
