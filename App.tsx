@@ -15,8 +15,6 @@ const AuthedApp: React.FC<{ user: User }> = ({ user }) => {
   const [activeTab, setActiveTab] = useState<'vision' | 'planner' | 'podcast' | 'progress'>('vision');
   const [streak, setStreak] = useState<StreakDoc | null>(null);
 
-  const PLANNER_SYNC_META_KEY = 'planner_sync_updatedAtMs';
-
   // Persistence logic
   const [visionItems, setVisionItems] = useState<VisionItem[]>(() => {
     const saved = localStorage.getItem('vision_items');
@@ -46,6 +44,7 @@ const AuthedApp: React.FC<{ user: User }> = ({ user }) => {
   // --- Firebase + localStorage sync (Tasks + Activities) ---
   const skipNextRemoteWriteRef = React.useRef(false);
   const remoteWriteTimerRef = React.useRef<number | null>(null);
+  const hasHydratedFromRemoteRef = React.useRef(false);
 
   useEffect(() => {
     // Subscribe to remote planner doc for cross-device sync.
@@ -55,43 +54,31 @@ const AuthedApp: React.FC<{ user: User }> = ({ user }) => {
     return subscribePlannerSync(
       uid,
       (remote) => {
-        const localMs = Number(localStorage.getItem(PLANNER_SYNC_META_KEY) || 0);
-
         const localTasks = tasksRef.current;
         const localActivities = activitiesRef.current;
 
-        if (!remote) {
-          // Seed Firebase with whatever is currently local (if any).
-          if ((localTasks?.length ?? 0) > 0 || (localActivities?.length ?? 0) > 0) {
-            const ms = Date.now();
-            localStorage.setItem(PLANNER_SYNC_META_KEY, String(ms));
-            writePlannerSync(uid, { tasks: localTasks, activities: localActivities, updatedAtMs: ms }).catch((e) =>
-              console.error('Failed to seed planner sync doc', e)
-            );
-          }
-          return;
-        }
+        // First remote snapshot wins for hydration to avoid stale-PWA/local clock issues.
+        if (remote) {
+          const remoteTasks = Array.isArray((remote as any).tasks) ? (remote as any).tasks : [];
+          const remoteActivities = Array.isArray((remote as any).activities)
+            ? (remote as any).activities
+            : [];
 
-        const remoteMs = Number((remote as any).updatedAtMs || 0);
-        const remoteTasks = Array.isArray((remote as any).tasks) ? (remote as any).tasks : [];
-        const remoteActivities = Array.isArray((remote as any).activities)
-          ? (remote as any).activities
-          : [];
-
-        // Remote newer => apply it locally.
-        if (remoteMs > localMs) {
           skipNextRemoteWriteRef.current = true;
           setTasks(remoteTasks);
           setActivities(remoteActivities);
-          localStorage.setItem(PLANNER_SYNC_META_KEY, String(remoteMs));
+          hasHydratedFromRemoteRef.current = true;
           return;
         }
 
-        // Local newer (or remote missing timestamp) => push local up.
-        if (localMs > remoteMs) {
-          writePlannerSync(uid, { tasks: localTasks, activities: localActivities, updatedAtMs: localMs }).catch((e) =>
-            console.error('Failed to push local planner state to Firebase', e)
-          );
+        // If no remote doc exists yet, seed it once from local state.
+        if (!hasHydratedFromRemoteRef.current) {
+          if ((localTasks?.length ?? 0) > 0 || (localActivities?.length ?? 0) > 0) {
+            writePlannerSync(uid, { tasks: localTasks, activities: localActivities }).catch((e) =>
+              console.error('Failed to seed planner sync doc', e)
+            );
+          }
+          hasHydratedFromRemoteRef.current = true;
         }
       },
       (err) => console.error('Planner sync subscription failed', err)
@@ -104,17 +91,17 @@ const AuthedApp: React.FC<{ user: User }> = ({ user }) => {
     const uid = user.uid;
     if (!uid) return;
 
+    // Avoid pushing localStorage state before we’ve gotten at least one remote snapshot.
+    if (!hasHydratedFromRemoteRef.current) return;
+
     if (skipNextRemoteWriteRef.current) {
       skipNextRemoteWriteRef.current = false;
       return;
     }
 
-    const ms = Date.now();
-    localStorage.setItem(PLANNER_SYNC_META_KEY, String(ms));
-
     if (remoteWriteTimerRef.current) window.clearTimeout(remoteWriteTimerRef.current);
     remoteWriteTimerRef.current = window.setTimeout(() => {
-      writePlannerSync(uid, { tasks, activities, updatedAtMs: ms }).catch((e) =>
+      writePlannerSync(uid, { tasks, activities }).catch((e) =>
         console.error('Failed to sync planner to Firebase', e)
       );
     }, 800);

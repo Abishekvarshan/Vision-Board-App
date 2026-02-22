@@ -1,12 +1,12 @@
-import { doc, onSnapshot, setDoc, Unsubscribe } from 'firebase/firestore';
+import { doc, onSnapshot, serverTimestamp, setDoc, Unsubscribe } from 'firebase/firestore';
 import { db } from './firebase';
 import type { Activity, Task } from '../types';
 
 export type PlannerSyncDoc = {
   tasks: Task[];
   activities: Activity[];
-  /** Milliseconds since epoch; used for simple last-write-wins conflict resolution. */
-  updatedAtMs: number;
+  /** Server timestamp, used for ordering/diagnostics; do NOT compare client clocks. */
+  updatedAt?: unknown;
 };
 
 export const plannerSyncRef = (uid: string) => doc(db, 'users', uid, 'app', 'planner');
@@ -30,7 +30,14 @@ export function subscribePlannerSync(
   );
 }
 
-export async function writePlannerSync(uid: string, data: PlannerSyncDoc) {
+export async function writePlannerSync(uid: string, data: Omit<PlannerSyncDoc, 'updatedAt'>) {
   const ref = plannerSyncRef(uid);
-  await setDoc(ref, data, { merge: true });
+  await setDoc(
+    ref,
+    {
+      ...data,
+      updatedAt: serverTimestamp(),
+    },
+    { merge: true }
+  );
 }
