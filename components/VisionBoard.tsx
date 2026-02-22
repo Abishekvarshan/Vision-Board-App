@@ -20,6 +20,100 @@ const cloudinaryTagListUrl = (cloudName: string, tag: string) =>
 const CLOUDINARY_DELETE_ENDPOINT = import.meta.env.VITE_CLOUDINARY_DELETE_ENDPOINT as string | undefined;
 const DEBUG = import.meta.env.DEV;
 
+function getCloudinaryPublicId(url: string): string | null {
+  // Supports URLs like:
+  // https://res.cloudinary.com/<cloud>/image/upload/<public_id>.<ext>
+  // https://res.cloudinary.com/<cloud>/image/upload/v123/<public_id>.<ext>
+  try {
+    const u = new URL(url);
+    const parts = u.pathname.split('/').filter(Boolean);
+    const uploadIdx = parts.findIndex((p) => p === 'upload');
+    if (uploadIdx < 0) return null;
+
+    const afterUpload = parts.slice(uploadIdx + 1);
+    if (afterUpload.length === 0) return null;
+
+    // Strip optional version segment: v123456
+    const first = afterUpload[0];
+    const publicIdParts = (first && /^v\d+$/.test(first)) ? afterUpload.slice(1) : afterUpload;
+    if (publicIdParts.length === 0) return null;
+
+    const last = publicIdParts[publicIdParts.length - 1];
+    // remove extension
+    publicIdParts[publicIdParts.length - 1] = last.replace(/\.[a-zA-Z0-9]+$/, '');
+    return publicIdParts.join('/');
+  } catch {
+    return null;
+  }
+}
+
+function buildCloudinaryUrl(opts: {
+  cloudName: string;
+  publicId: string;
+  transforms: string;
+}): string {
+  const { cloudName, publicId, transforms } = opts;
+  return `https://res.cloudinary.com/${cloudName}/image/upload/${transforms}/${publicId}`;
+}
+
+const BlurUpImage: React.FC<{
+  src: string;
+  alt: string;
+  cloudName?: string;
+  publicId?: string;
+  className?: string;
+}> = ({ src, alt, cloudName, publicId, className }) => {
+  const [loaded, setLoaded] = useState(false);
+
+  const derivedPublicId = useMemo(() => {
+    return publicId || getCloudinaryPublicId(src);
+  }, [publicId, src]);
+
+  const canTransform = Boolean(cloudName && derivedPublicId);
+
+  const optimizedSrc = useMemo(() => {
+    if (!canTransform) return src;
+    return buildCloudinaryUrl({
+      cloudName: cloudName!,
+      publicId: derivedPublicId!,
+      // Reasonable default for masonry cards; browser will downscale further if needed.
+      transforms: 'w_700,q_auto,f_auto',
+    });
+  }, [canTransform, cloudName, derivedPublicId, src]);
+
+  const placeholderSrc = useMemo(() => {
+    if (!canTransform) return undefined;
+    return buildCloudinaryUrl({
+      cloudName: cloudName!,
+      publicId: derivedPublicId!,
+      // Tiny, heavily-compressed, blurred placeholder.
+      transforms: 'w_40,q_10,f_auto,e_blur:200',
+    });
+  }, [canTransform, cloudName, derivedPublicId]);
+
+  return (
+    <div className="relative w-full">
+      {placeholderSrc && (
+        <img
+          src={placeholderSrc}
+          alt=""
+          aria-hidden="true"
+          className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-300 ${loaded ? 'opacity-0' : 'opacity-100'}`}
+          style={{ filter: 'blur(12px)', transform: 'scale(1.05)' }}
+        />
+      )}
+      <img
+        src={optimizedSrc}
+        alt={alt}
+        className={className}
+        loading="lazy"
+        decoding="async"
+        onLoad={() => setLoaded(true)}
+      />
+    </div>
+  );
+};
+
 export const VisionBoard: React.FC<Props> = ({ items, onAddItem, onDeleteItem }) => {
   useEffect(() => {
     if (DEBUG) console.log('[VisionBoard] VITE_CLOUDINARY_DELETE_ENDPOINT:', CLOUDINARY_DELETE_ENDPOINT);
@@ -286,11 +380,12 @@ export const VisionBoard: React.FC<Props> = ({ items, onAddItem, onDeleteItem })
                   onClick={(e) => handleCardClick(e, item.id)}
                   className="group relative bg-white dark:bg-slate-900 rounded-[1.75rem] overflow-hidden shadow-sm hover:shadow-2xl transition-all duration-500 border border-slate-100 dark:border-slate-800 cursor-pointer"
                 >
-                  <img
+                  <BlurUpImage
                     src={item.url}
                     alt="Vision"
+                    cloudName={CLOUD_NAME}
+                    publicId={item.publicId}
                     className="w-full h-auto object-cover group-hover:scale-[1.02] transition-transform duration-500"
-                    loading="lazy"
                   />
 
                   <button
