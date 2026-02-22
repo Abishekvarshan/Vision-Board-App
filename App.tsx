@@ -8,11 +8,14 @@ import { VisionBoard } from './components/VisionBoard';
 import { Activity, Task, VisionItem } from './types';
 import { getUserStreak, recordActivityForUser, StreakDoc } from './src/streak';
 import { toLocalISODate } from './src/date';
+import { subscribePlannerSync, writePlannerSync } from './src/plannerSync';
 import type { User } from 'firebase/auth';
 
 const AuthedApp: React.FC<{ user: User }> = ({ user }) => {
   const [activeTab, setActiveTab] = useState<'vision' | 'planner' | 'podcast' | 'progress'>('vision');
   const [streak, setStreak] = useState<StreakDoc | null>(null);
+
+  const PLANNER_SYNC_META_KEY = 'planner_sync_updatedAtMs';
 
   // Persistence logic
   const [visionItems, setVisionItems] = useState<VisionItem[]>(() => {
@@ -29,6 +32,93 @@ const AuthedApp: React.FC<{ user: User }> = ({ user }) => {
     const saved = localStorage.getItem('activity_history');
     return saved ? JSON.parse(saved) : [];
   });
+
+  // Keep refs to latest values so Firestore callbacks don't accidentally read stale state.
+  const tasksRef = React.useRef<Task[]>(tasks);
+  const activitiesRef = React.useRef<Activity[]>(activities);
+  useEffect(() => {
+    tasksRef.current = tasks;
+  }, [tasks]);
+  useEffect(() => {
+    activitiesRef.current = activities;
+  }, [activities]);
+
+  // --- Firebase + localStorage sync (Tasks + Activities) ---
+  const skipNextRemoteWriteRef = React.useRef(false);
+  const remoteWriteTimerRef = React.useRef<number | null>(null);
+
+  useEffect(() => {
+    // Subscribe to remote planner doc for cross-device sync.
+    const uid = user.uid;
+    if (!uid) return;
+
+    return subscribePlannerSync(
+      uid,
+      (remote) => {
+        const localMs = Number(localStorage.getItem(PLANNER_SYNC_META_KEY) || 0);
+
+        const localTasks = tasksRef.current;
+        const localActivities = activitiesRef.current;
+
+        if (!remote) {
+          // Seed Firebase with whatever is currently local (if any).
+          if ((localTasks?.length ?? 0) > 0 || (localActivities?.length ?? 0) > 0) {
+            const ms = Date.now();
+            localStorage.setItem(PLANNER_SYNC_META_KEY, String(ms));
+            writePlannerSync(uid, { tasks: localTasks, activities: localActivities, updatedAtMs: ms }).catch((e) =>
+              console.error('Failed to seed planner sync doc', e)
+            );
+          }
+          return;
+        }
+
+        const remoteMs = Number((remote as any).updatedAtMs || 0);
+        const remoteTasks = Array.isArray((remote as any).tasks) ? (remote as any).tasks : [];
+        const remoteActivities = Array.isArray((remote as any).activities)
+          ? (remote as any).activities
+          : [];
+
+        // Remote newer => apply it locally.
+        if (remoteMs > localMs) {
+          skipNextRemoteWriteRef.current = true;
+          setTasks(remoteTasks);
+          setActivities(remoteActivities);
+          localStorage.setItem(PLANNER_SYNC_META_KEY, String(remoteMs));
+          return;
+        }
+
+        // Local newer (or remote missing timestamp) => push local up.
+        if (localMs > remoteMs) {
+          writePlannerSync(uid, { tasks: localTasks, activities: localActivities, updatedAtMs: localMs }).catch((e) =>
+            console.error('Failed to push local planner state to Firebase', e)
+          );
+        }
+      },
+      (err) => console.error('Planner sync subscription failed', err)
+    );
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user.uid]);
+
+  useEffect(() => {
+    // Any local change => update Firebase (debounced).
+    const uid = user.uid;
+    if (!uid) return;
+
+    if (skipNextRemoteWriteRef.current) {
+      skipNextRemoteWriteRef.current = false;
+      return;
+    }
+
+    const ms = Date.now();
+    localStorage.setItem(PLANNER_SYNC_META_KEY, String(ms));
+
+    if (remoteWriteTimerRef.current) window.clearTimeout(remoteWriteTimerRef.current);
+    remoteWriteTimerRef.current = window.setTimeout(() => {
+      writePlannerSync(uid, { tasks, activities, updatedAtMs: ms }).catch((e) =>
+        console.error('Failed to sync planner to Firebase', e)
+      );
+    }, 800);
+  }, [activities, tasks, user.uid]);
 
   useEffect(() => {
     localStorage.setItem('vision_items', JSON.stringify(visionItems));

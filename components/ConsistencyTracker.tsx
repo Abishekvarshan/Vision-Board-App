@@ -315,6 +315,7 @@ export const ConsistencyTracker: React.FC<Props> = ({
 
   const getColor = (count: number, inMonth: boolean) => {
     if (!inMonth) return 'bg-transparent';
+    // No activity logged that day.
     if (count === 0) return 'bg-slate-100 dark:bg-slate-800';
 
     // Inverted intensity:
